@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Initiative tracker: no longer flickers after each action (selecting a creature, turns, malice, conditions).
+  The re-render after the tracker saves is built from the state it just wrote instead of re-reading notes.
+- Minion stamina pool: damage beyond the remaining pool is capped at the pool, so overkill damage can always
+  be applied (it kills every remaining minion). Typed stamina values are kept between 0 and the pool max.
 - Initiative tracker: creature instances in the enemy group grid (including minions) show their conditions as
   small icons under the portrait.
 - Dying heroes: the stamina window's bar turns red when the change would leave a hero dying, and the
