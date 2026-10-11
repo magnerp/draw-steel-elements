@@ -11,7 +11,7 @@ import {
     TFile,
 } from "obsidian";
 
-interface NoteSuggestion {
+export interface NoteSuggestion {
     file: TFile;
     match: SearchResult | null; // Match in the note name (for highlighting); null for path-only matches
     score: number;
@@ -22,6 +22,59 @@ const LINK_FIELD_REGEX = /^\s*(?:-\s*)?(?:statblock|party)\s*:\s*["']?\[\[([^\[\
 const FENCE_REGEX = /^\s*(`{3,}|~{3,})(.*)$/;
 const MAX_FENCE_SEARCH_LINES = 1000;
 const MAX_SUGGESTIONS = 50;
+
+/** Fuzzy-searches notes by name (ranked first) and path. An empty query lists notes alphabetically. */
+export function searchNotes(files: TFile[], query: string): NoteSuggestion[] {
+    query = query.trim();
+    if (!query) {
+        return files
+            .slice()
+            .sort((a, b) => a.basename.localeCompare(b.basename))
+            .slice(0, MAX_SUGGESTIONS)
+            .map((file) => ({file, match: null, score: 0}));
+    }
+
+    const fuzzy = prepareFuzzySearch(query);
+    const results: NoteSuggestion[] = [];
+    files.forEach((file) => {
+        const match = fuzzy(file.basename);
+        if (match) {
+            // Name matches always rank above path-only matches
+            results.push({file, match, score: 1000 + match.score});
+            return;
+        }
+        const pathMatch = fuzzy(file.path);
+        if (pathMatch) {
+            results.push({file, match: null, score: pathMatch.score});
+        }
+    });
+    return results
+        .sort((a, b) => b.score - a.score)
+        .slice(0, MAX_SUGGESTIONS);
+}
+
+/**
+ * Notes that look like statblocks: `stamina` in their frontmatter (every compendium statblock has
+ * it) or "statblock" in their path.
+ */
+export function statblockFiles(app: App): TFile[] {
+    return app.vault.getMarkdownFiles().filter((file) =>
+        app.metadataCache.getFileCache(file)?.frontmatter?.stamina != null || /statblock/i.test(file.path)
+    );
+}
+
+/** Searches statblock notes, falling back to all notes when no statblock note matches. */
+export function searchStatblocks(app: App, query: string): NoteSuggestion[] {
+    const results = searchNotes(statblockFiles(app), query);
+    return results.length > 0 ? results : searchNotes(app.vault.getMarkdownFiles(), query);
+}
+
+export function renderNoteSuggestion(suggestion: NoteSuggestion, el: HTMLElement): void {
+    const content = el.createEl("div", {cls: "suggestion-content"});
+    const title = content.createEl("div", {cls: "suggestion-title"});
+    renderMatches(title, suggestion.file.basename, suggestion.match?.matches ?? null);
+    content.createEl("div", {cls: "suggestion-note", text: suggestion.file.path});
+}
 
 /**
  * Obsidian's own [[link]] suggestions don't work inside code blocks. This offers note suggestions
@@ -46,39 +99,15 @@ export class NoteLinkSuggest extends EditorSuggest<NoteSuggestion> {
     }
 
     getSuggestions(context: EditorSuggestContext): NoteSuggestion[] {
-        const files = this.app.vault.getMarkdownFiles();
-        const query = context.query.trim();
-        if (!query) {
-            return files
-                .sort((a, b) => a.basename.localeCompare(b.basename))
-                .slice(0, MAX_SUGGESTIONS)
-                .map((file) => ({file, match: null, score: 0}));
-        }
-
-        const fuzzy = prepareFuzzySearch(query);
-        const results: NoteSuggestion[] = [];
-        files.forEach((file) => {
-            const match = fuzzy(file.basename);
-            if (match) {
-                // Name matches always rank above path-only matches
-                results.push({file, match, score: 1000 + match.score});
-                return;
-            }
-            const pathMatch = fuzzy(file.path);
-            if (pathMatch) {
-                results.push({file, match: null, score: pathMatch.score});
-            }
-        });
-        return results
-            .sort((a, b) => b.score - a.score)
-            .slice(0, MAX_SUGGESTIONS);
+        // `statblock:` suggests statblock notes first; `party:` any note
+        const isStatblockField = /statblock\s*:/.test(context.editor.getLine(context.start.line));
+        return isStatblockField
+            ? searchStatblocks(this.app, context.query)
+            : searchNotes(this.app.vault.getMarkdownFiles(), context.query);
     }
 
     renderSuggestion(suggestion: NoteSuggestion, el: HTMLElement): void {
-        const content = el.createEl("div", {cls: "suggestion-content"});
-        const title = content.createEl("div", {cls: "suggestion-title"});
-        renderMatches(title, suggestion.file.basename, suggestion.match?.matches ?? null);
-        content.createEl("div", {cls: "suggestion-note", text: suggestion.file.path});
+        renderNoteSuggestion(suggestion, el);
     }
 
     selectSuggestion(suggestion: NoteSuggestion, evt: MouseEvent | KeyboardEvent): void {

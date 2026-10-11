@@ -845,6 +845,93 @@ code.dsa {
 	font-weight: bold;
 }
 
+/* Add Enemy Group modal */
+
+.ds-add-group-modal .add-group-name-row {
+	display: flex;
+	align-items: center;
+	gap: 0.75em;
+	margin-bottom: 1em;
+}
+
+.ds-add-group-modal .add-group-name-row input {
+	flex: 1;
+}
+
+.ds-add-group-modal .add-group-section-title {
+	font-weight: bold;
+	margin-bottom: 0.5em;
+}
+
+.ds-add-group-modal .add-group-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.ds-add-group-modal .add-group-statblock {
+	flex: 1;
+	min-width: 0;
+}
+
+.ds-add-group-modal .add-group-count {
+	width: 4.5em;
+}
+
+.ds-add-group-modal .add-group-info {
+	display: flex;
+	align-items: center;
+	gap: 0.4em;
+	min-width: 9em;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.ds-add-group-modal .add-group-minion-tag {
+	padding: 0 0.5em;
+	border-radius: 10px;
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}
+
+.ds-add-group-modal .add-group-info-error {
+	color: var(--text-error);
+}
+
+.ds-add-group-modal .add-group-remove {
+	display: flex;
+	cursor: pointer;
+	color: var(--text-faint);
+}
+
+.ds-add-group-modal .add-group-remove:hover {
+	color: var(--text-error);
+}
+
+.ds-add-group-modal .add-group-add-row {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+}
+
+.ds-add-group-modal .add-group-btn-icon {
+	display: flex;
+}
+
+.ds-add-group-modal .add-group-hint {
+	margin-top: 0.75em;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.ds-add-group-modal .add-group-error {
+	margin-top: 0.5em;
+	color: var(--text-error);
+	white-space: pre-wrap;
+}
+
 /* Party heroes and recoveries */
 
 .heroes-header {

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Initiative tracker: **Add Enemy Group** button opens a dialog to add a group from statblock notes, with
+  monster name suggestions from the vault and a count per creature. `enemy_groups` is now optional.
+- Initiative tracker: creatures whose statblock role contains "minion" automatically make their group a squad
+  (`is_squad: true`, `squad_role: minion`, and `captain` for one other creature) when that forms a valid squad.
+- The `[[` suggestions after `statblock:` now list statblock notes first.
 - Initiative tracker / party: `statblock:` and `party:` accept unquoted links (`statblock: [[Thorn Dragon]]`),
   and links with an alias or heading. Typing `[[` after `statblock:` or `party:` inside a `ds-` code block
   now shows note suggestions (Obsidian's own link suggestions don't work in code blocks).
