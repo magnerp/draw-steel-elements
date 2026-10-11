@@ -1,5 +1,7 @@
 import {parseYaml} from "obsidian";
 
+export type InterestKey = "i0" | "i1" | "i2" | "i3" | "i4" | "i5";
+
 export class NegotiationData {
     name?: string;
     initial_patience?: number;

@@ -1,5 +1,5 @@
 import {App, MarkdownPostProcessorContext} from "obsidian";
-import {NegotiationData} from "@model/NegotiationData";
+import {InterestKey, NegotiationData} from "@model/NegotiationData";
 import {CodeBlocks} from "@utils/CodeBlocks";
 
 export class PatienceInterestView {
@@ -65,7 +65,7 @@ export class PatienceInterestView {
 			const label = iLine.createEl("div", { cls: `ds-nt-interest-label ds-nt-interest-${i}-label`, text: `${i}` });
 			label.addEventListener("click", () => this.setInterest(i, parent));
 
-			const offerText = this.data[`i${i}`] ?? `Offer at Interest ${i}`;
+			const offerText = this.data[`i${i}` as InterestKey] ?? `Offer at Interest ${i}`;
 			iLine.createEl("div", { cls: `ds-nt-interest-offer ds-nt-interest-${i}-offer`, text: offerText });
 		}
 
