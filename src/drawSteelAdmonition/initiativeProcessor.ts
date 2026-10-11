@@ -11,6 +11,7 @@ import {
     CreatureInstance,
     EncounterData,
     EnemyGroup,
+    getWrittenEncounter,
     Hero,
     parseEncounterData,
     resetEncounter,
@@ -38,8 +39,12 @@ export class InitiativeProcessor {
         const container = el.createEl("div", {cls: "ds-init-container"});
 
         try {
-            const data = await parseEncounterData(source, this.app, this.plugin.settings);
-            await applyParty(data, this.app, this.plugin.settings, ctx.sourcePath);
+            // Re-render after our own write: build synchronously from the state we wrote (no flicker)
+            let data = getWrittenEncounter(ctx.sourcePath, source);
+            if (!data) {
+                data = await parseEncounterData(source, this.app, this.plugin.settings);
+                await applyParty(data, this.app, this.plugin.settings, ctx.sourcePath);
+            }
             this.buildUI(container, data, ctx);
             if (data.party) {
                 this.watchParty(container, data, ctx);

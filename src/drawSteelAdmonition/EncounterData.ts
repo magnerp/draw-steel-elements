@@ -189,6 +189,35 @@ export function serializeEncounter(data: EncounterData): any {
     return out;
 }
 
+// The encounter state the tracker just wrote to a code block, keyed by note path and block text.
+// Writing the block makes Obsidian re-render it; building that render from this copy (synchronously,
+// instead of re-parsing and re-reading statblock/party notes) keeps the tracker from flickering.
+// Entries are short-lived so a later render (e.g. reopening the note after the party note changed)
+// always re-reads everything.
+const renderCache = new Map<string, {data: EncounterData, writtenAt: number}>();
+const RENDER_CACHE_TTL_MS = 5000;
+
+function renderCacheKey(sourcePath: string, blockText: string): string {
+    return `${sourcePath}\n${blockText.trim()}`;
+}
+
+export function rememberWrittenEncounter(sourcePath: string, blockText: string, data: EncounterData): void {
+    const now = Date.now();
+    renderCache.forEach((entry, key) => {
+        if (now - entry.writtenAt > RENDER_CACHE_TTL_MS) renderCache.delete(key);
+    });
+    renderCache.set(renderCacheKey(sourcePath, blockText), {data: structuredClone(data), writtenAt: now});
+}
+
+/** A fresh copy of the encounter the tracker just wrote as `blockText`; undefined if it didn't (recently). */
+export function getWrittenEncounter(sourcePath: string, blockText: string): EncounterData | undefined {
+    const entry = renderCache.get(renderCacheKey(sourcePath, blockText));
+    if (!entry || Date.now() - entry.writtenAt > RENDER_CACHE_TTL_MS) {
+        return undefined;
+    }
+    return structuredClone(entry.data);
+}
+
 export async function parseEncounterData(source: string, app: App, settings: DSESettings): Promise<EncounterData> {
     let data: EncounterData;
 
