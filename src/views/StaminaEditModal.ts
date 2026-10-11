@@ -314,8 +314,8 @@ export class StaminaEditModal extends Modal {
 			this.close();
 		});
 
-		// Set focus once we have loaded
-		queueMicrotask(() => { applyInput.focus(); });
+		// Set focus once we have loaded, with the value selected so typing replaces the 0
+		queueMicrotask(() => { applyInput.focus(); applyInput.select(); });
 	}
 
 	private clampStamina(stamina: number, negativeStaminaLimit: number, maxPossibleStamina: number): number {

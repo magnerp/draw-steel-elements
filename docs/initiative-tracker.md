@@ -281,7 +281,8 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 - **Stamina Management**: Click on the hero's stamina display to open a modal where you can:
 	- Apply damage or healing.
 	- Adjust temporary stamina points.
-- **Conditions**: Add or remove conditions affecting the hero.
+- **Conditions**: Add or remove conditions affecting the hero. Middle-click a hero's row to open the Add Conditions
+  window directly.
 
 ### Enemy Groups
 
@@ -293,8 +294,14 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 	- **Conditions**: Each instance's conditions show as small icons under its portrait. Add or remove them in the
 	  details row of the selected instance.
 	- **Health Management**:
-		- **Regular Creatures**: Double-click on a creature instance to open the health management modal.
-		- **Minions**: Click on the stamina display of the minion group to open the Minion Stamina Pool modal.
+		- **Regular Creatures**: Double-click on a creature instance to open the health management modal, or
+		  right-click it to open the modal directly without selecting it first.
+		- **Minions**: Click on the stamina display of the minion group to open the Minion Stamina Pool modal, or
+		  right-click any minion in the grid.
+	- **Kill**: Ctrl+right-click a creature to kill it. Regular creatures and captains drop to 0 stamina. For a
+	  minion, only that minion is marked dead and its stamina (one minion's max stamina) is taken out of the squad's
+	  pool, so earlier damage carries over (e.g. 4 minions with 3 stamina at 10/12: killing one leaves 7/9).
+	- **Conditions**: Middle-click a creature to open the Add Conditions window for it, without selecting it.
 
 ### Stamina Pool Modal for Minions
 
