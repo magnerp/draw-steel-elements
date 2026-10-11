@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Initiative tracker / party: `statblock:` and `party:` accept unquoted links (`statblock: [[Thorn Dragon]]`),
+  and links with an alias or heading. Typing `[[` after `statblock:` or `party:` inside a `ds-` code block
+  now shows note suggestions (Obsidian's own link suggestions don't work in code blocks).
+- Statblock references fall back to the note's frontmatter (`item_name`/`name`, `stamina`, `image`) when it has
+  no `ds-` code block, so the compendium's retainer statblocks can be referenced.
 - Initiative tracker: enemy groups can be removed from the tracker with a trash icon next to the group name
   (shown on hover, asks for confirmation).
 - Initiative tracker: no longer flickers after each action (selecting a creature, turns, malice, conditions).

@@ -214,11 +214,19 @@ The reference supports multiple formats:
 1. **Full Path from vault root**: `Homebrew/monsters/MonsterName.md` (with or without `.md`)
 2. **Relative to Compendium root**: `Bestiary/Monsters/MonsterName` (with or without `.md`)
 3. **File Name**: `MonsterName` (with or without `.md`) looks for `MonsterName.md` anywhere in the vault 
-4. **Link**: `[[MonsterName]]` will use the first found link matching the name.  
+4. **Link**: `[[MonsterName]]` will use the first found link matching the name. Quotes are optional
+   (`statblock: [[MonsterName]]` works), and an alias or heading (`[[MonsterName|Alias]]`) is ignored.
  
 **Important:** if using File Name or Link and there are multiple files with the same name, the chosen one is not guaranteed. To ensure the correct file, specify the full path 
 
+**Autocomplete:** Obsidian doesn't suggest links inside code blocks, so the plugin does: type `[[` after `statblock:`
+(or `party:`) inside a `ds-` code block to get note suggestions. Pick one to insert `[[Note Name]]`.
+Note that links inside code blocks aren't tracked by Obsidian, so they don't show up as backlinks and aren't
+updated when you rename the note.
+
 When a statblock is referenced, the plugin will look for the first Draw Steel Element code block (`ds-statblock` or similar) in that file and use its data.
+If the note has no such block but has `stamina` in its frontmatter (like the compendium's retainer statblocks), the
+name (`item_name`, `name`, or the file name), stamina, and `image` are read from the frontmatter instead.
 
 **Example using references:**
 
