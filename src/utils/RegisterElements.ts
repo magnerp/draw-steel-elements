@@ -11,6 +11,7 @@ import {CounterProcessor} from "@drawSteelAdmonition/Counter/CounterProcessor";
 import {CharacteristicsProcessor} from "@drawSteelAdmonition/Characteristics/CharacteristicsProcessor";
 import {ValuesRowProcessor} from "@drawSteelAdmonition/ValuesRow/ValuesRowProcessor";
 import { genericComponentProcessor } from "./ComponentProcessor";
+import { NoteLinkSuggest } from "./NoteLinkSuggest";
 
 import HorizontalRule from "@drawSteelComponents/HorizontalRule.vue"
 import SkillList from "@drawSteelComponents/SkillList/SkillList.vue";
@@ -33,6 +34,9 @@ export function registerElements (plugin: DrawSteelAdmonitionPlugin) {
 	const hrProcessor = new genericComponentProcessor(plugin, HorizontalRule, undefined, "Horizontal Rule", true);
 	plugin.registerMarkdownCodeBlockProcessor("ds-hr", hrProcessor.handler);
 	plugin.registerMarkdownCodeBlockProcessor("ds-horizontal-rule", hrProcessor.handler);
+
+	// [[link]] suggestions for statblock/party references inside ds- code blocks
+	plugin.registerEditorSuggest(new NoteLinkSuggest(plugin.app));
 
 	const initProcessor = new InitiativeProcessor(plugin);
 	plugin.registerMarkdownCodeBlockProcessor("ds-it", initProcessor.handler);

@@ -15,7 +15,9 @@ export class ReferenceResolver {
             if (data.startsWith('@')) {
                 return await this.resolvePath(data.substring(1));
             } else if (data.startsWith('[[') && data.endsWith(']]')) {
-                return await this.resolvePath(data.substring(2, data.length - 2));
+                // Drop an alias ([[Note|Alias]]) or heading ([[Note#Heading]])
+                const link = data.substring(2, data.length - 2).split('|')[0].split('#')[0].trim();
+                return await this.resolvePath(link);
             }
             return await this.resolvePath(data);
         }
@@ -51,7 +53,16 @@ export class ReferenceResolver {
         const match = content.match(blockRegex);
 
         if (!match) {
-            throw new Error(`No Draw Steel Elements code block (ds-*) found in ${file.path}`);
+            // Some compendium notes (e.g. retainers) are plain markdown with the stats in frontmatter
+            const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+            if (frontmatter?.stamina != null) {
+                return {
+                    name: frontmatter.item_name ?? frontmatter.name ?? file.basename,
+                    stamina: frontmatter.stamina,
+                    image: frontmatter.image,
+                };
+            }
+            throw new Error(`No Draw Steel Elements code block (ds-*) or frontmatter 'stamina' found in ${file.path}`);
         }
 
         const yamlContent = match[2];

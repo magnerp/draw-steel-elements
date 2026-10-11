@@ -97,6 +97,19 @@ export function resetEncounter(data: EncounterData) {
     data.malice.value = 0;
 }
 
+/**
+ * An unquoted `[[Note]]` in YAML parses as a nested list (`[["Note"]]`); turn it back into the
+ * link string `"[[Note]]"`. Anything else is returned unchanged.
+ */
+export function normalizeLinkRef(value: any): any {
+    if (!Array.isArray(value)) {
+        return value;
+    }
+    let inner: any = value;
+    while (Array.isArray(inner) && inner.length === 1) inner = inner[0];
+    return typeof inner === "string" ? `[[${inner}]]` : value;
+}
+
 export function normalizeConditions(conditions: (string | Condition)[] | undefined, owner: string): Condition[] {
     return conditions?.map((cond) => {
         if (typeof cond === "string") {
@@ -118,6 +131,7 @@ export function normalizeConditions(conditions: (string | Condition)[] | undefin
 }
 
 export async function initHero(hero: Hero, index: number, resolver: ReferenceResolver): Promise<void> {
+    hero.statblock = normalizeLinkRef(hero.statblock);
     if (typeof hero.statblock === 'string') {
         try {
             const resolved = await resolver.resolveReferences(hero.statblock);
@@ -236,11 +250,7 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
     }
 
     // An unquoted [[Link]] parses as a nested list
-    let partyRef: any = data.party;
-    if (Array.isArray(partyRef)) {
-        while (Array.isArray(partyRef)) partyRef = partyRef[0];
-        data.party = `[[${partyRef}]]`;
-    }
+    data.party = normalizeLinkRef(data.party);
     if (data.party != null && typeof data.party !== "string") {
         throw new Error("Invalid data: 'party' must be a link to a note containing a ds-party block.");
     }
@@ -312,6 +322,7 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
         }
 
         for (const [creatureIndex, creature] of group.creatures.entries()) {
+            creature.statblock = normalizeLinkRef(creature.statblock);
             if (typeof creature.statblock === 'string') {
                 try {
                     const resolved = await resolver.resolveReferences(creature.statblock);

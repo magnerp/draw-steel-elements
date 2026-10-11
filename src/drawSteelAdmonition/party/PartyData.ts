@@ -1,7 +1,7 @@
 import {App, parseYaml, stringifyYaml, TFile} from "obsidian";
 import {DSESettings} from "@model/Settings";
 import {ReferenceResolver} from "@utils/ReferenceResolver";
-import {EncounterData, Hero, initHero, normalizeConditions} from "@drawSteelAdmonition/EncounterData";
+import {EncounterData, Hero, initHero, normalizeConditions, normalizeLinkRef} from "@drawSteelAdmonition/EncounterData";
 
 export interface PartyData {
     name?: string;
@@ -13,7 +13,7 @@ const PARTY_BLOCK_REGEX = /^([`~]{3,})ds-party[ \t]*\n([\s\S]*?)^\1[ \t]*$/m;
 
 /** Key used to find a hero's entry in the party note when writing state back. */
 function partyHeroKey(rawHero: any): string | undefined {
-    return rawHero?.name ?? rawHero?.statblock;
+    return rawHero?.name ?? normalizeLinkRef(rawHero?.statblock);
 }
 
 export async function parsePartyData(source: string, app: App, settings: DSESettings): Promise<PartyData> {
