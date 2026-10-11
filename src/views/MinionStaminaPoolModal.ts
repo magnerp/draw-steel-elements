@@ -84,6 +84,7 @@ export class MinionStaminaPoolModal extends Modal {
 			const newStaminaValue = parseInt(staminaValueDisplay.value);
 			if (!isNaN(newStaminaValue)) {
 				this.pendingStaminaChange = newStaminaValue - poolCurrentStamina;
+				this.clampPendingChange();
 				this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight);
 				this.updateInfoText(infoText);
 				this.updateCheckboxes();
@@ -143,6 +144,7 @@ export class MinionStaminaPoolModal extends Modal {
 			if (!isNaN(damage) && !isNaN(minions)) {
 				const totalDamage = damage * minions;
 				this.pendingStaminaChange -= totalDamage;
+				this.clampPendingChange();
 				this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight);
 				this.updateInfoText(infoText);
 				this.updateCheckboxes();
@@ -244,6 +246,17 @@ export class MinionStaminaPoolModal extends Modal {
 
 		// Initialize checkboxes
 		this.updateCheckboxes();
+	}
+
+	// Keep the pool between 0 and its max: damage beyond what's left (or healing past max) is capped,
+	// so overkill damage can always be applied (it kills every remaining minion)
+	private clampPendingChange() {
+		const minionMaxStamina = this.creature.max_stamina;
+		const aliveMinions = this.creature.instances?.filter((inst) => !inst.isDead).length ?? 0;
+		const poolMaxStamina = aliveMinions * minionMaxStamina;
+		const poolCurrentStamina = this.group.minion_stamina_pool ?? poolMaxStamina;
+		const newStamina = Math.min(poolMaxStamina, Math.max(0, poolCurrentStamina + this.pendingStaminaChange));
+		this.pendingStaminaChange = newStamina - poolCurrentStamina;
 	}
 
 	private updateStaminaBar(staminaBarFillLeft: HTMLElement, staminaBarFillRight: HTMLElement) {
