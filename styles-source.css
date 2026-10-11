@@ -995,6 +995,54 @@ code.dsa {
 	color: var(--text-muted);
 }
 
+.party-hero-remove {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	z-index: 1;
+	display: flex;
+	cursor: pointer;
+	color: var(--text-faint);
+	visibility: hidden;
+}
+
+.party-hero-remove svg {
+	width: 14px;
+	height: 14px;
+}
+
+.ds-party-container .character-row:hover .party-hero-remove,
+.is-mobile .party-hero-remove {
+	visibility: visible;
+}
+
+.party-hero-remove:hover {
+	color: var(--text-error);
+}
+
+.ds-add-hero-modal .add-hero-image-preview {
+	display: flex;
+	align-items: center;
+	font-size: var(--font-ui-smaller);
+}
+
+.ds-add-hero-modal .add-hero-image-preview img {
+	width: 32px;
+	height: 32px;
+	object-fit: cover;
+	border-radius: 4px;
+}
+
+.ds-add-hero-modal .add-hero-image-error {
+	color: var(--text-error);
+	white-space: nowrap;
+}
+
+.ds-add-hero-modal .add-hero-error {
+	margin-top: 0.5em;
+	color: var(--text-error);
+}
+
 .quick-mod-btn.disabled {
 	opacity: 0.5;
 	cursor: not-allowed;

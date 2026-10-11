@@ -77,7 +77,7 @@ The encounter data consists of three main sections:
 - `statblock` (string or object, optional): A reference to a statblock file or an inline statblock object. If provided, `name`, `max_stamina`, and `image` will be populated from the referenced statblock if they are not explicitly set.
 - `current_stamina` (number, optional): The current health points of the hero. Defaults to `max_stamina` if not provided.
 - `temp_stamina` (number, optional): Temporary health points (stamina). Defaults to `0`.
-- `image` (string, optional): Path to the hero's image.
+- `image` (string, optional): The hero's image: a vault path, an image name or link (`"[[frodo.png]]"`), or a URL.
 - `conditions` (list of strings, optional): List of condition keys affecting the hero.
 - `max_recoveries` (number, optional): The hero's number of Recoveries. When set, the tracker shows and tracks the hero's remaining Recoveries.
 - `current_recoveries` (number, optional): Remaining Recoveries. Defaults to `max_recoveries`.
@@ -142,6 +142,9 @@ Party heroes use the same fields as [Heroes](#hero-fields). Hero names must be u
 
 The party note itself renders the party: click a hero's stamina to open the stamina window, adjust Recoveries,
 or press **Respite** to restore every hero to full stamina and Recoveries (and clear temporary stamina).
+Press **Add Hero** to add a hero to the party (name, max stamina, and optionally max Recoveries and an image,
+with image suggestions from the vault), or hover a hero
+and click the **×** in its corner to remove them from the party. Both edit the `ds-party` block in the note.
 
 ### Recoveries
 

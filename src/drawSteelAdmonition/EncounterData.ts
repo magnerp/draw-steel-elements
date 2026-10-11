@@ -132,6 +132,8 @@ export function normalizeConditions(conditions: (string | Condition)[] | undefin
 
 export async function initHero(hero: Hero, index: number, resolver: ReferenceResolver): Promise<void> {
     hero.statblock = normalizeLinkRef(hero.statblock);
+    // An unquoted `image: [[portrait.png]]` parses as a nested list
+    hero.image = normalizeLinkRef(hero.image);
     if (typeof hero.statblock === 'string') {
         try {
             const resolved = await resolver.resolveReferences(hero.statblock);

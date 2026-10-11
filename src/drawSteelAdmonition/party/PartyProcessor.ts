@@ -1,8 +1,11 @@
-import {App, MarkdownPostProcessorContext, Modal, Notice, TFile} from "obsidian";
-import {Hero} from "@drawSteelAdmonition/EncounterData";
+import {App, MarkdownPostProcessorContext, Modal, Notice, setIcon, TFile} from "obsidian";
+import {Hero, initHero} from "@drawSteelAdmonition/EncounterData";
 import {parsePartyData, PartyData, PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
 import {StaminaEditModal} from "@views/StaminaEditModal";
+import {AddHeroModal} from "@views/AddHeroModal";
+import {ConfirmModal} from "@views/ConfirmModal";
+import {ReferenceResolver} from "@utils/ReferenceResolver";
 import {StaminaBar} from "@model/StaminaBar";
 import {Images} from "@utils/Images";
 import {Stamina} from "@utils/Stamina";
@@ -44,13 +47,21 @@ export class PartyProcessor {
         }
     }
 
-    private save(heroes: Hero[], ctx: MarkdownPostProcessorContext): void {
+    /** The note this party block is in, or null (with a notice) if it can't be saved to. */
+    private noteFile(ctx: MarkdownPostProcessorContext): TFile | null {
         const file = ctx.sourcePath ? this.app.vault.getAbstractFileByPath(ctx.sourcePath) : null;
         if (!(file instanceof TFile)) {
             new Notice("Draw Steel Elements: a party must be in a regular note to be saved (not a canvas).");
-            return;
+            return null;
         }
-        PartyStore.saveHeroes(this.app, file, heroes);
+        return file;
+    }
+
+    private save(heroes: Hero[], ctx: MarkdownPostProcessorContext): void {
+        const file = this.noteFile(ctx);
+        if (file) {
+            PartyStore.saveHeroes(this.app, file, heroes);
+        }
     }
 
     private buildUI(container: HTMLElement, data: PartyData, ctx: MarkdownPostProcessorContext): void {
@@ -72,16 +83,59 @@ export class PartyProcessor {
             }).open();
         });
 
+        const addHeroButton = topActionBar.createEl("button", {text: "Add Hero", cls: "add-hero-button"});
+        addHeroButton.addEventListener("click", () => {
+            new AddHeroModal(this.app, async (rawHero) => {
+                if (data.heroes.some((hero) => hero.name === rawHero.name)) {
+                    throw new Error(`The party already has a hero named '${rawHero.name}'.`);
+                }
+                const file = this.noteFile(ctx);
+                if (!file) return;
+
+                // Copy before initHero fills in runtime fields; only the entered fields are written
+                const hero = {...rawHero, party_key: rawHero.name} as Hero;
+                await initHero(hero, data.heroes.length, new ReferenceResolver(this.app, this.plugin.settings));
+                await PartyStore.addHero(this.app, file, rawHero);
+                data.heroes.push(hero);
+                container.empty();
+                this.buildUI(container, data, ctx);
+            }).open();
+        });
+
         const heroesContainer = container.createEl("div", {cls: "heroes-container"});
         heroesContainer.createEl("h3", {text: data.name ?? "Party"});
         data.heroes.forEach((hero) => {
             const heroContEl = heroesContainer.createEl("div", {cls: "hero-container"});
-            this.buildHeroRow(heroContEl, hero, ctx);
+            this.buildHeroRow(heroContEl, hero, ctx, () => {
+                data.heroes = data.heroes.filter((other) => other !== hero);
+                container.empty();
+                this.buildUI(container, data, ctx);
+            });
         });
     }
 
-    private buildHeroRow(container: HTMLElement, hero: Hero, ctx: MarkdownPostProcessorContext): void {
+    private buildRemoveButton(rowEl: HTMLElement, hero: Hero, onRemoved: () => void, ctx: MarkdownPostProcessorContext): void {
+        const removeEl = rowEl.createEl("div", {cls: "party-hero-remove", attr: {title: `Remove ${hero.name} from the party`}});
+        setIcon(removeEl, "x");
+        removeEl.addEventListener("click", () => {
+            new ConfirmModal(
+                this.app,
+                "Remove Hero?",
+                `Remove ${hero.name} from this party? Encounters using the party will no longer include them.`,
+                "Remove",
+                async () => {
+                    const file = this.noteFile(ctx);
+                    if (!file) return;
+                    await PartyStore.removeHero(this.app, file, hero);
+                    onRemoved();
+                },
+            ).open();
+        });
+    }
+
+    private buildHeroRow(container: HTMLElement, hero: Hero, ctx: MarkdownPostProcessorContext, onRemoved: () => void): void {
         const rowEl = container.createEl("div", {cls: "character-row"});
+        this.buildRemoveButton(rowEl, hero, onRemoved, ctx);
 
         const imageEl = rowEl.createEl("div", {cls: "character-image"});
         Images.resolveImageSourceOrDefault(this.app, hero.image ?? null, this.plugin.settings.defaultImagePath)
@@ -115,7 +169,7 @@ export class PartyProcessor {
                     hero.current_recoveries = (hero.current_recoveries ?? hero.max_recoveries) - result.recoveriesSpent;
                 }
                 container.empty();
-                this.buildHeroRow(container, hero, ctx);
+                this.buildHeroRow(container, hero, ctx, onRemoved);
                 this.save([hero], ctx);
             }, true, recovery).open();
         });
