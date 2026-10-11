@@ -809,6 +809,60 @@ code.dsa {
 	font-weight: bold;
 }
 
+/* Party heroes and recoveries */
+
+.heroes-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.party-link-tag {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.hero-recoveries {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	margin-top: 4px;
+	font-size: 0.75em;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.hero-recoveries.no-recoveries .recovery-text {
+	color: var(--text-error);
+}
+
+.recovery-adjust-btn {
+	display: flex;
+	cursor: pointer;
+	visibility: hidden;
+}
+
+.recovery-adjust-btn svg {
+	width: 12px;
+	height: 12px;
+}
+
+.hero-recoveries:hover .recovery-adjust-btn,
+.is-mobile .recovery-adjust-btn {
+	visibility: visible;
+}
+
+.hero-recovery-value {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.quick-mod-btn.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 /* ==================== */
 /*     Stamina Modal    */
 /* ==================== */
@@ -914,7 +968,16 @@ code.dsa {
 	background-color: var(--stamina-bar-color-dying);
 }
 
-/* Winded tag in the initiative tracker rows */
+/* Winded / Dying tags in the initiative tracker rows */
+
+.character-stamina .stamina-dying-tag {
+	display: block;
+	font-size: 0.7em;
+	text-align: center;
+	color: white;
+	background-color: var(--stamina-bar-color-dying);
+	border-radius: 10px;
+}
 
 .character-stamina .stamina-winded-tag {
 	display: block;

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Dying heroes: the stamina window's bar turns red when the change would leave a hero dying, and the
+  tracker and party rows show a red "Dying" tag (or "Dead") next to the hero's stamina.
+- New `ds-party` block: define your heroes once in a party note and link encounters to it with
+  `party: "[[Party Note]]"`. Party heroes' stamina, temporary stamina, and Recoveries are shared across
+  every linked encounter (saved in the party note); turn markers and conditions stay per encounter.
+  The party note has a Respite button to restore all heroes.
+- Heroes can track Recoveries (`max_recoveries`, optional `recovery_value`). The stamina window's
+  Spend Recovery button uses one up, and the tracker shows a Recoveries counter.
 - Initiative tracker: the stamina (damage/healing) modal now shows the Winded value for heroes and
   enemies: a hatched "Winded" zone on the bar, a "Winded at N or less" line (plus the Dying/Dead
   thresholds for heroes), and a live Winded/Dying/Dead badge for the stamina the pending change would

@@ -34,4 +34,9 @@ export class Stamina {
 		}
 		return 'healthy';
 	}
+
+	/** Stamina regained when spending a Recovery: a third of max stamina (rounded down) unless overridden. */
+	public static recoveryValue(maxStamina: number, override?: number): number {
+		return override ?? Math.floor(maxStamina / 3);
+	}
 }

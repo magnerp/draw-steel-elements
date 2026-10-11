@@ -1,5 +1,5 @@
-import {App, MarkdownPostProcessorContext, setIcon} from "obsidian";
-import {StaminaEditModal} from "@views/StaminaEditModal";
+import {App, MarkdownPostProcessorContext, MarkdownRenderChild, setIcon} from "obsidian";
+import {RecoveryInfo, StaminaEditModal} from "@views/StaminaEditModal";
 import {ConditionManager} from "@utils/Conditions";
 import {AddConditionsModal} from "@views/ConditionSelectModal";
 import {Images} from "@utils/Images";
@@ -18,6 +18,8 @@ import {
 import {ResetEncounterModal} from "@views/ResetEncounterModal";
 import {MinionStaminaPoolModal} from "@views/MinionStaminaPoolModal";
 import {StaminaBar} from "@model/StaminaBar";
+import {applyParty, PartyStore} from "@drawSteelAdmonition/party/PartyData";
+import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
 import DrawSteelAdmonitionPlugin from "main";
 
 export class InitiativeProcessor {
@@ -37,7 +39,11 @@ export class InitiativeProcessor {
 
         try {
             const data = await parseEncounterData(source, this.app, this.plugin.settings);
+            await applyParty(data, this.app, this.plugin.settings, ctx.sourcePath);
             this.buildUI(container, data, ctx);
+            if (data.party) {
+                this.watchParty(container, data, ctx);
+            }
             // Avoid clicks in reading mode from opening edit view
             const stop = (e: Event) => {
                 e.preventDefault();
@@ -53,6 +59,33 @@ export class InitiativeProcessor {
                 "failed to process the input config.  Please correct the following error:\n\n";
             userMessage += error.message;
             container.createEl("div", {text: userMessage, cls: "error-message ds-container"});
+        }
+    }
+
+    /** Re-renders the tracker when the party note changes (e.g. from another encounter or the party view). */
+    private watchParty(container: HTMLElement, data: EncounterData, ctx: MarkdownPostProcessorContext): void {
+        const partyPath = PartyStore.resolveFile(this.app, data.party!, ctx.sourcePath).path;
+        const child = new MarkdownRenderChild(container);
+        child.registerEvent(this.app.vault.on("modify", async (file) => {
+            if (file.path !== partyPath) return;
+            try {
+                await applyParty(data, this.app, this.plugin.settings, ctx.sourcePath);
+                container.empty();
+                this.buildUI(container, data, ctx);
+            } catch (e) {
+                console.warn("Draw Steel Elements: failed to refresh party heroes.", e);
+            }
+        }));
+        ctx.addChild(child);
+    }
+
+    /** Saves a hero's stamina/recoveries: to the party note for party heroes, otherwise to this code block. */
+    private async saveHeroStamina(hero: Hero, data: EncounterData, ctx: MarkdownPostProcessorContext): Promise<void> {
+        if (hero.from_party && data.party) {
+            const file = PartyStore.resolveFile(this.app, data.party, ctx.sourcePath);
+            await PartyStore.saveHeroes(this.app, file, [hero]);
+        } else {
+            await CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
         }
     }
 
@@ -97,7 +130,15 @@ export class InitiativeProcessor {
 
         // Heroes UI
         const heroesContainer = container.createEl("div", {cls: "heroes-container"});
-        heroesContainer.createEl("h3", {text: "Heroes"});
+        const heroesHeader = heroesContainer.createEl("div", {cls: "heroes-header"});
+        heroesHeader.createEl("h3", {text: "Heroes"});
+        if (data.party) {
+            heroesHeader.createEl("span", {
+                cls: "party-link-tag",
+                text: `Party: ${data.party.replace(/^\[\[|\]\]$/g, "")}`,
+                attr: {title: "Stamina and Recoveries of party heroes are shared with every encounter using this party"},
+            });
+        }
 
         data.heroes.forEach((hero) => {
             const heroContEl = heroesContainer.createEl("div", {cls: "hero-container"});
@@ -191,13 +232,31 @@ export class InitiativeProcessor {
 
         staminaEl.addEventListener("click", () => {
             let staminaBar = StaminaBar.fromHero(character);
-            const modal = new StaminaEditModal(this.app, staminaBar, true, character.name, () => {
+            const modal = new StaminaEditModal(this.app, staminaBar, true, character.name, (result) => {
                 staminaBar.updateHero(character);
-                this.updateStaminaDisplay(staminaEl, character);
-                CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
-            });
+                if (character.max_recoveries != null) {
+                    character.current_recoveries = (character.current_recoveries ?? character.max_recoveries) - result.recoveriesSpent;
+                }
+                // Recoveries display is rebuilt along with the row
+                container.empty();
+                this.buildCharacterRow(container, character, data, ctx);
+                this.saveHeroStamina(character, data, ctx);
+            }, true, this.recoveryInfo(character));
             modal.open();
         });
+
+        buildRecoveryControl(healthEl, character, () => this.saveHeroStamina(character, data, ctx));
+    }
+
+    private recoveryInfo(hero: Hero): RecoveryInfo | undefined {
+        if (hero.max_recoveries == null) {
+            return undefined;
+        }
+        return {
+            current: hero.current_recoveries ?? hero.max_recoveries,
+            max: hero.max_recoveries,
+            value: Stamina.recoveryValue(hero.max_stamina, hero.recovery_value),
+        };
     }
 
     private buildEnemyGroupRow(
@@ -470,6 +529,21 @@ export class InitiativeProcessor {
             if (winded && staminaEl.hasClass("character-stamina")) {
                 staminaEl.createEl("span", {cls: "stamina-winded-tag", text: "Winded"});
             }
+
+            // Dying (0 or less) / Dead (negative half of max) only apply to heroes
+            if (this.isHero(character) && staminaEl.hasClass("character-stamina")) {
+                this.addDyingTag(staminaEl, currentStamina, maxStamina);
+            }
+        }
+    }
+
+    private addDyingTag(staminaEl: HTMLElement, currentStamina: number, maxStamina: number): void {
+        const status = Stamina.status(currentStamina, maxStamina, true);
+        if (status === "dying" || status === "dead") {
+            staminaEl.createEl("span", {cls: "stamina-dying-tag", text: status === "dying" ? "Dying" : "Dead"});
+            staminaEl.title = status === "dying"
+                ? `Dying (dead at ${Stamina.minimumStamina(maxStamina, true)})`
+                : "Dead";
         }
     }
 

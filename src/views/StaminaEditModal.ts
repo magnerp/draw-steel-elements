@@ -2,26 +2,40 @@ import { App, Modal, setIcon } from "obsidian";
 import {StaminaBar} from "@model/StaminaBar";
 import {Stamina} from "@utils/Stamina";
 
+// Tracked recoveries of a hero (only heroes with max_recoveries have them)
+export interface RecoveryInfo {
+	current: number;
+	max: number;
+	value: number;
+}
+
+export interface StaminaEditResult {
+	recoveriesSpent: number;
+}
+
 export class StaminaEditModal extends Modal {
 	private staminaBar: StaminaBar;
 	private isHero: boolean;
 	private name: string;
-	private updateCallback: () => void;
+	private updateCallback: (result: StaminaEditResult) => void;
 	private statusBadge: HTMLElement | null = null;
 	// Winded doesn't apply to minions (squad_role: minion)
 	private showWinded: boolean;
+	private recovery?: RecoveryInfo;
 
 	// New properties for pending STAMINA and Temp STAMINA changes
 	private pendingStaminaChange: number = 0;
 	private pendingTempStaminaChange: number = 0;
+	private pendingRecoveriesSpent: number = 0;
 
 	constructor(
 		app: App,
 		staminaBar: StaminaBar,
 		isHero: boolean,
 		name: string,
-		updateCallback: () => void,
-		showWinded: boolean = true
+		updateCallback: (result: StaminaEditResult) => void,
+		showWinded: boolean = true,
+		recovery?: RecoveryInfo
 	) {
 		super(app);
 		this.staminaBar = staminaBar;
@@ -29,6 +43,7 @@ export class StaminaEditModal extends Modal {
 		this.name = name;
 		this.updateCallback = updateCallback;
 		this.showWinded = showWinded;
+		this.recovery = recovery;
 	}
 
 	onOpen() {
@@ -247,11 +262,21 @@ export class StaminaEditModal extends Modal {
 
 		const recoveryButton = quickModContainer.createEl('button', { cls: 'quick-mod-btn' });
 		setIcon(recoveryButton.createEl('div', { cls: 'btn-icon' }), "syringe");
-		recoveryButton.createEl('div', { cls: 'btn-text', text: 'Spend Recovery' });
+		const recoveryText = recoveryButton.createEl('div', { cls: 'btn-text' });
+		this.updateRecoveryButton(recoveryButton, recoveryText);
 		recoveryButton.addEventListener('click', () => {
-			const adjustment = Math.min(Math.floor(maxStamina / 3), maxStamina);
+			if (this.recovery && this.recovery.current - this.pendingRecoveriesSpent <= 0) {
+				return;
+			}
+			const adjustment = this.recovery
+				? this.recovery.value
+				: Math.min(Math.floor(maxStamina / 3), maxStamina);
 			if (!isNaN(adjustment)) {
 				this.pendingStaminaChange += adjustment;
+				if (this.recovery) {
+					this.pendingRecoveriesSpent += 1;
+					this.updateRecoveryButton(recoveryButton, recoveryText);
+				}
 				this.updateStaminaDisplay(staminaValueDisplay, currentStamina);
 				this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight, negativeStaminaLimit, maxStamina);
 				this.updateActionButton(actionButton);
@@ -268,6 +293,8 @@ export class StaminaEditModal extends Modal {
 		resetButton.addEventListener('click', () => {
 			this.pendingStaminaChange = 0;
 			this.pendingTempStaminaChange = 0;
+			this.pendingRecoveriesSpent = 0;
+			this.updateRecoveryButton(recoveryButton, recoveryText);
 			this.updateStaminaDisplay(staminaValueDisplay, currentStamina);
 			tempStaminaInput.value = (currentTempStamina + this.pendingTempStaminaChange).toString();
 			this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight, negativeStaminaLimit, maxStamina);
@@ -283,7 +310,7 @@ export class StaminaEditModal extends Modal {
 			const newTempStamina = currentTempStamina + this.pendingTempStaminaChange;
 			this.staminaBar.temp_stamina = newTempStamina;
 
-			this.updateCallback();
+			this.updateCallback({ recoveriesSpent: this.pendingRecoveriesSpent });
 			this.close();
 		});
 
@@ -314,7 +341,10 @@ export class StaminaEditModal extends Modal {
 		const resultingStamina = this.clampStamina(
 			this.staminaBar.current_stamina + this.pendingStaminaChange, negativeStaminaLimit, maxStamina);
 		const resultingWinded = this.showWinded && Stamina.isWinded(resultingStamina, maxStamina);
-		const remainingColor = resultingWinded ? 'var(--stamina-bar-color-winded, gold)' : 'limegreen';
+		const resultingDying = this.isHero && Stamina.status(resultingStamina, maxStamina, true) === 'dying';
+		const remainingColor = resultingDying
+			? 'var(--stamina-bar-color-dying, red)'
+			: resultingWinded ? 'var(--stamina-bar-color-winded, gold)' : 'limegreen';
 		this.updateStatusBadge(resultingStamina, maxStamina);
 
 		if (this.pendingStaminaChange > 0) {
@@ -360,9 +390,23 @@ export class StaminaEditModal extends Modal {
 		staminaValueDisplay.value = newStaminaValue.toString();
 	}
 
+	private updateRecoveryButton(recoveryButton: HTMLElement, recoveryText: HTMLElement) {
+		if (!this.recovery) {
+			recoveryText.setText('Spend Recovery');
+			return;
+		}
+		const remaining = this.recovery.current - this.pendingRecoveriesSpent;
+		recoveryText.setText(`Spend Recovery (${remaining}/${this.recovery.max})`);
+		recoveryButton.toggleClass('disabled', remaining <= 0);
+		recoveryButton.title = remaining > 0
+			? `Regain ${this.recovery.value} stamina and use up one Recovery`
+			: 'No Recoveries left';
+	}
+
 	private updateActionButton(actionButton: HTMLElement) {
 		const staminaChange = this.pendingStaminaChange;
 		const tempStaminaChange = this.pendingTempStaminaChange;
+		const recoveriesSpent = this.pendingRecoveriesSpent;
 		let actionText = '';
 
 		if (staminaChange < 0) {
@@ -382,6 +426,13 @@ export class StaminaEditModal extends Modal {
 			}
 		}
 
+		if (recoveriesSpent > 0) {
+			if (actionText !== '') {
+				actionText += ' and ';
+			}
+			actionText += `Spend ${recoveriesSpent} ${recoveriesSpent === 1 ? 'Recovery' : 'Recoveries'}`;
+		}
+
 		if (actionText === '') {
 			actionText = 'No Stamina Change';
 		}
@@ -389,6 +440,6 @@ export class StaminaEditModal extends Modal {
 		actionButton.textContent = actionText;
 
 		// Disable the button if no change
-		actionButton.toggleClass('disabled', staminaChange === 0 && tempStaminaChange === 0);
+		actionButton.toggleClass('disabled', staminaChange === 0 && tempStaminaChange === 0 && recoveriesSpent === 0);
 	}
 }

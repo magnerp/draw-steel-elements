@@ -1,12 +1,12 @@
 import {App, MarkdownPostProcessorContext, TFile, stringifyYaml, ItemView} from "obsidian";
-import {EncounterData} from "@drawSteelAdmonition/EncounterData";
+import {EncounterData, serializeEncounter} from "@drawSteelAdmonition/EncounterData";
 import {NegotiationData} from "@model/NegotiationData";
 import {StaminaBar} from "@model/StaminaBar";
 import {Counter} from "@model/Counter";
 
 export class CodeBlocks {
 	static async updateInitiativeTracker(app: App, data: EncounterData, ctx: MarkdownPostProcessorContext): Promise<void> {
-		return CodeBlocks.updateCodeBlock(app, data, ctx, "ds-initiative");
+		return CodeBlocks.updateCodeBlock(app, serializeEncounter(data), ctx, "ds-initiative");
 	}
 
 	static async updateNegotiationTracker(app: App, data: NegotiationData, ctx: MarkdownPostProcessorContext): Promise<void> {
