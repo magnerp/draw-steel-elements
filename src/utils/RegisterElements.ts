@@ -1,6 +1,7 @@
-import {Plugin} from 'obsidian';
+import DrawSteelAdmonitionPlugin from "main";
 
 import {InitiativeProcessor} from "@drawSteelAdmonition/initiativeProcessor";
+import {PartyProcessor} from "@drawSteelAdmonition/party/PartyProcessor";
 import {NegotiationTrackerProcessor} from "@drawSteelAdmonition/negotiation/NegotiationTrackerProcessor";
 import {StatblockProcessor} from "@drawSteelAdmonition/statblock/StatblockProcessor";
 import { FeatureProcessor } from "@drawSteelAdmonition/Features/FeatureProcessor";
@@ -18,7 +19,7 @@ import StaminaBar from "@drawSteelComponents/StaminaBar/StaminaBar.vue";
 import { Skills as SkillsModel } from "@model/Skills";
 import { StaminaBar as StaminaBarModel } from '@/model/StaminaBar';
 
-export function registerElements (plugin: Plugin) {
+export function registerElements (plugin: DrawSteelAdmonitionPlugin) {
 
 	const abilityProcessor = new FeatureProcessor(plugin);
 	plugin.registerMarkdownCodeBlockProcessor("ds-ft", abilityProcessor.handler);
@@ -38,6 +39,9 @@ export function registerElements (plugin: Plugin) {
 	plugin.registerMarkdownCodeBlockProcessor("ds-init", initProcessor.handler);
 	plugin.registerMarkdownCodeBlockProcessor("ds-initiative", initProcessor.handler);
 	plugin.registerMarkdownCodeBlockProcessor("ds-initiative-tracker", initProcessor.handler);
+
+	const partyProcessor = new PartyProcessor(plugin);
+	plugin.registerMarkdownCodeBlockProcessor("ds-party", partyProcessor.handler);
 
 	let ntProcessor = new NegotiationTrackerProcessor(plugin.app);
 	plugin.registerMarkdownCodeBlockProcessor("ds-nt", ntProcessor.handler);

@@ -78,6 +78,9 @@ The encounter data consists of three main sections:
 - `temp_stamina` (number, optional): Temporary health points (stamina). Defaults to `0`.
 - `image` (string, optional): Path to the hero's image.
 - `conditions` (list of strings, optional): List of condition keys affecting the hero.
+- `max_recoveries` (number, optional): The hero's number of Recoveries. When set, the tracker shows and tracks the hero's remaining Recoveries.
+- `current_recoveries` (number, optional): Remaining Recoveries. Defaults to `max_recoveries`.
+- `recovery_value` (number, optional): Stamina regained when spending a Recovery. Defaults to a third of `max_stamina` (rounded down).
 - `has_taken_turn` (boolean, managed): Indicates if the hero has taken their turn. Managed by the tracker.
 
 #### Example
@@ -92,6 +95,60 @@ heroes:
     conditions:
       - "blinded"
 ```
+
+### Party (shared heroes)
+
+Instead of repeating the same heroes in every encounter, define your party once in its own note with a
+`ds-party` block, and link encounters to it with the `party` field:
+
+```
+~~~ds-party
+name: "The Fellowship"
+heroes:
+  - name: "Frodo Baggins"
+    max_stamina: 30
+    max_recoveries: 8
+    image: "images/frodo.png"
+  - statblock: "Heroes/Samwise"
+    max_recoveries: 10
+~~~
+```
+
+```
+~~~ds-initiative
+party: "[[The Fellowship]]"
+enemy_groups:
+  - name: "Mordor Forces"
+    creatures:
+      - name: "Orc"
+        max_stamina: 40
+        amount: 4
+~~~
+```
+
+Party heroes use the same fields as [Heroes](#hero-fields). Hero names must be unique within a party.
+
+- **Shared state**: each party hero's stamina, temporary stamina, and Recoveries are saved in the party note,
+  not in the encounter. If a hero ends one encounter at 20/30 stamina, they start the next encounter at 20/30.
+  Open trackers using the party refresh when the party note changes.
+- **Per-encounter state**: turn markers and conditions stay with each encounter (saved under `party_state`,
+  managed by the tracker).
+- **Extra heroes**: you can still list `heroes` in the encounter (allies, guest heroes). They are shown after the
+  party and work as before. `heroes` is optional when `party` is set.
+- **Reset Encounter State** doesn't touch party heroes' stamina or Recoveries.
+- The `party` field accepts a link (`"[[My Party]]"`), a vault path, or a note name. The party note must be a
+  regular note (not a canvas card).
+
+The party note itself renders the party: click a hero's stamina to open the stamina window, adjust Recoveries,
+or press **Respite** to restore every hero to full stamina and Recoveries (and clear temporary stamina).
+
+### Recoveries
+
+Heroes with `max_recoveries` show a **Recoveries x/y** counter under their stamina, in the tracker and in the
+party note. Hover the counter to show **-**/**+** buttons that change the count without changing stamina.
+
+In the stamina window, **Spend Recovery** regains the hero's recovery value and uses up one Recovery
+(the button shows how many are left and is disabled at 0). Recoveries are only used when you apply the change.
 
 ### Enemy Groups
 
@@ -264,7 +321,24 @@ Click the "Reset Encounter State" button to clear all "state" data from the trac
 
 - **Kill**: Sets current stamina to zero (creatures) or negative half maximum stamina (heroes), removes all temporary stamina.
 - **Full Heal**: Restores current stamina to maximum.
-- **Spend Recovery**: Increases current stamina by one-third of the maximum stamina.
+- **Spend Recovery**: Increases current stamina by one-third of the maximum stamina (or the hero's
+  `recovery_value`). For heroes with `max_recoveries`, it also uses up one of their Recoveries.
+
+#### Winded
+
+A hero or creature is *winded* when its stamina is equal to or less than half of its maximum (rounded down).
+The stamina modal shows this for both heroes and enemies:
+
+- A hatched **Winded** zone on the stamina bar.
+- A line under the bar with the threshold (for example, "Winded at 40 or less"). For heroes this also lists the
+  Dying (0 or less) and Dead (negative half maximum) thresholds.
+- A live badge (**Winded**, **Dying**, or **Dead**) for the stamina the pending change would leave. The remaining
+  stamina on the bar turns yellow while winded, and red while a hero is dying.
+
+In the tracker itself, a hero or enemy at or below the winded threshold gets a **Winded** tag next to their stamina.
+A hero at 0 stamina or less gets a red **Dying** tag instead (or **Dead** at negative half their maximum).
+Winded status is display only; it does not add the Winded condition for you. Creatures with `squad_role: minion`
+never show winded values (in the modal or the tracker), since minions don't use them. Captains and other creatures do.
 
 ### Conditions
 

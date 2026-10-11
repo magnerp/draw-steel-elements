@@ -809,6 +809,60 @@ code.dsa {
 	font-weight: bold;
 }
 
+/* Party heroes and recoveries */
+
+.heroes-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.party-link-tag {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.hero-recoveries {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	margin-top: 4px;
+	font-size: 0.75em;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+.hero-recoveries.no-recoveries .recovery-text {
+	color: var(--text-error);
+}
+
+.recovery-adjust-btn {
+	display: flex;
+	cursor: pointer;
+	visibility: hidden;
+}
+
+.recovery-adjust-btn svg {
+	width: 12px;
+	height: 12px;
+}
+
+.hero-recoveries:hover .recovery-adjust-btn,
+.is-mobile .recovery-adjust-btn {
+	visibility: visible;
+}
+
+.hero-recovery-value {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.quick-mod-btn.disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
 /* ==================== */
 /*     Stamina Modal    */
 /* ==================== */
@@ -857,6 +911,81 @@ code.dsa {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+}
+
+/* Winded zone (stamina from 1 up to half of max) */
+
+.stamina-bar-winded-overlay {
+	position: absolute;
+	top: 1px;
+	height: calc(100% - 2px);
+	z-index: 1;
+	pointer-events: none;
+	background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 1.41px, transparent 1px 6px);
+	box-shadow: 1px 0 0 0 var(--text-normal);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.stamina-bar-winded-label {
+	padding: 0 0.4em;
+	font-size: 0.7em;
+	line-height: 1.4em;
+	color: var(--text-normal);
+	background-color: var(--background-primary-alt);
+	border-radius: 10px;
+}
+
+/* Threshold summary and live status under the bar */
+
+.stamina-status-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 10px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.stamina-status-badge {
+	font-weight: bold;
+	padding: 0 0.6em;
+	border-radius: 10px;
+	min-height: 1.4em;
+}
+
+.stamina-status-badge.status-winded {
+	color: black;
+	background-color: var(--stamina-bar-color-winded);
+}
+
+.stamina-status-badge.status-dying,
+.stamina-status-badge.status-dead {
+	color: white;
+	background-color: var(--stamina-bar-color-dying);
+}
+
+/* Winded / Dying tags in the initiative tracker rows */
+
+.character-stamina .stamina-dying-tag {
+	display: block;
+	font-size: 0.7em;
+	text-align: center;
+	color: white;
+	background-color: var(--stamina-bar-color-dying);
+	border-radius: 10px;
+}
+
+.character-stamina .stamina-winded-tag {
+	display: block;
+	font-size: 0.7em;
+	text-align: center;
+	color: black;
+	background-color: var(--stamina-bar-color-winded);
+	border-radius: 10px;
 }
 
 .stamina-bar-fill-left {

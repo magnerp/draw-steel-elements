@@ -12,6 +12,18 @@ export interface Hero {
     has_taken_turn?: boolean;
     conditions: (string | Condition)[];
     statblock?: any; // To allow property fallback
+    max_recoveries?: number;
+    current_recoveries?: number;
+    recovery_value?: number; // Defaults to a third of max stamina
+    // Runtime only (never serialized): set for heroes loaded from a ds-party note
+    from_party?: boolean;
+    party_key?: string;
+}
+
+// Per-encounter state for party heroes. Stamina and recoveries live in the party note instead.
+export interface PartyHeroState {
+    has_taken_turn?: boolean;
+    conditions?: (string | Condition)[];
 }
 
 export interface CreatureInstance {
@@ -53,6 +65,8 @@ export interface Condition {
 }
 
 export interface EncounterData {
+    party?: string; // Link to a note containing a ds-party block
+    party_state?: Record<string, PartyHeroState>;
     heroes: Hero[];
     enemy_groups: EnemyGroup[];
     // REVIEW: should we make this into a number since Malice is only {value: number}?
@@ -61,10 +75,14 @@ export interface EncounterData {
 
 export function resetEncounter(data: EncounterData) {
     data.heroes.forEach((hero) => {
-        hero.current_stamina = undefined;
-        hero.temp_stamina = undefined;
         hero.has_taken_turn = undefined;
         hero.conditions = Array<Condition | string>();
+        // Party heroes keep their stamina and recoveries; those are shared across encounters
+        if (!hero.from_party) {
+            hero.current_stamina = undefined;
+            hero.temp_stamina = undefined;
+            hero.current_recoveries = undefined;
+        }
     });
     data.enemy_groups.forEach((group) => {
         group.has_taken_turn = undefined;
@@ -77,6 +95,98 @@ export function resetEncounter(data: EncounterData) {
         });
     });
     data.malice.value = 0;
+}
+
+export function normalizeConditions(conditions: (string | Condition)[] | undefined, owner: string): Condition[] {
+    return conditions?.map((cond) => {
+        if (typeof cond === "string") {
+            return {
+                key: cond,
+                color: undefined,
+                effect: undefined
+            }
+        } else if (typeof cond === "object" && cond.key) {
+            return {
+                key: cond.key,
+                color: cond.color ?? undefined,
+                effect: cond.effect ?? undefined,
+            };
+        } else {
+            throw new Error(`Invalid condition format for ${owner}.`);
+        }
+    }) ?? [];
+}
+
+export async function initHero(hero: Hero, index: number, resolver: ReferenceResolver): Promise<void> {
+    if (typeof hero.statblock === 'string') {
+        try {
+            const resolved = await resolver.resolveReferences(hero.statblock);
+            if (resolved) {
+                if (!hero.name && resolved.name) hero.name = resolved.name;
+                if (!hero.max_stamina && resolved.stamina) hero.max_stamina = +resolved.stamina;
+                if (!hero.image && resolved.image) hero.image = resolved.image;
+            }
+        } catch (e) {
+            const message = `
+Failed to resolve hero statblock reference at index ${index} (${hero.statblock}):
+    ${e.message}
+
+Are there multiple instances of the '${hero.statblock}' file in your vault? If so, please specify the full path.
+`;
+            throw new Error(message);
+        }
+    }
+
+    if (!hero.name) {
+        throw new Error(`Hero at index ${index} is missing the 'name' field.`);
+    }
+    if (typeof hero.max_stamina !== "number") {
+        throw new Error(`Hero '${hero.name}' is missing or has an invalid 'max_stamina' field.`);
+    }
+    if (hero.max_recoveries != null && typeof hero.max_recoveries !== "number") {
+        throw new Error(`Hero '${hero.name}' has an invalid 'max_recoveries' field.`);
+    }
+    if (hero.recovery_value != null && typeof hero.recovery_value !== "number") {
+        throw new Error(`Hero '${hero.name}' has an invalid 'recovery_value' field.`);
+    }
+
+    hero.conditions = normalizeConditions(hero.conditions, `hero '${hero.name}'`);
+
+    hero.isHero = true;
+    hero.has_taken_turn = hero.has_taken_turn ?? false;
+    hero.current_stamina = hero.current_stamina ?? hero.max_stamina;
+    hero.temp_stamina = hero.temp_stamina ?? 0;
+    if (hero.max_recoveries != null) {
+        hero.current_recoveries = hero.current_recoveries ?? hero.max_recoveries;
+    }
+}
+
+/**
+ * Builds the object written back to the ds-initiative code block. Party heroes are left out of
+ * `heroes`; only their per-encounter state (turn, conditions) is kept, under `party_state`.
+ */
+export function serializeEncounter(data: EncounterData): any {
+    const out: any = {};
+    if (data.party) {
+        out.party = data.party;
+    }
+    out.heroes = data.heroes.filter((hero) => !hero.from_party).map((hero) => {
+        const {from_party, party_key, ...rest} = hero;
+        return rest;
+    });
+    if (data.party) {
+        const state: Record<string, PartyHeroState> = {};
+        data.heroes.filter((hero) => hero.from_party).forEach((hero) => {
+            state[hero.name] = {has_taken_turn: hero.has_taken_turn, conditions: hero.conditions};
+        });
+        out.party_state = state;
+    }
+    Object.keys(data).forEach((key) => {
+        if (!(key in out) && key !== "party_state") {
+            out[key] = (data as any)[key];
+        }
+    });
+    return out;
 }
 
 export async function parseEncounterData(source: string, app: App, settings: DSESettings): Promise<EncounterData> {
@@ -96,7 +206,20 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
         throw new Error("The input must be a YAML object.");
     }
 
-    // Validate 'heroes' field
+    // An unquoted [[Link]] parses as a nested list
+    let partyRef: any = data.party;
+    if (Array.isArray(partyRef)) {
+        while (Array.isArray(partyRef)) partyRef = partyRef[0];
+        data.party = `[[${partyRef}]]`;
+    }
+    if (data.party != null && typeof data.party !== "string") {
+        throw new Error("Invalid data: 'party' must be a link to a note containing a ds-party block.");
+    }
+
+    // Validate 'heroes' field (optional when the heroes come from a party note)
+    if (data.party && data.heroes == null) {
+        data.heroes = [];
+    }
     if (!data.heroes || !Array.isArray(data.heroes)) {
         throw new Error("Invalid data: 'heroes' field is missing or is not a list.");
     }
@@ -108,55 +231,7 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
 
     // Initialize heroes
     for (const [index, hero] of data.heroes.entries()) {
-        if (typeof hero.statblock === 'string') {
-            try {
-                const resolved = await resolver.resolveReferences(hero.statblock);
-                if (resolved) {
-                    if (!hero.name && resolved.name) hero.name = resolved.name;
-                    if (!hero.max_stamina && resolved.stamina) hero.max_stamina = +resolved.stamina;
-                    if (!hero.image && resolved.image) hero.image = resolved.image;
-                }
-            } catch (e) {
-                const message = `
-Failed to resolve hero statblock reference at index ${index} (${hero.statblock}):
-    ${e.message}
-
-Are there multiple instances of the '${hero.statblock}' file in your vault? If so, please specify the full path.
-`;
-                throw new Error(message);
-            }
-        }
-
-        if (!hero.name) {
-            throw new Error(`Hero at index ${index} is missing the 'name' field.`);
-        }
-        if (typeof hero.max_stamina !== "number") {
-            throw new Error(`Hero '${hero.name}' is missing or has an invalid 'max_stamina' field.`);
-        }
-
-        hero.conditions =
-            hero.conditions?.map((cond) => {
-                if (typeof cond === "string") {
-                    return {
-                        key: cond,
-                        color: undefined,
-                        effect: undefined
-                    }
-                } else if (typeof cond === "object" && cond.key) {
-                    return {
-                        key: cond.key,
-                        color: cond.color ?? undefined,
-                        effect: cond.effect ?? undefined,
-                    };
-                } else {
-                    throw new Error(`Invalid condition format for hero '${hero.name}'.`);
-                }
-            }) ?? [];
-
-        hero.isHero = true;
-        hero.has_taken_turn = hero.has_taken_turn ?? false;
-        hero.current_stamina = hero.current_stamina ?? hero.max_stamina;
-        hero.temp_stamina = hero.temp_stamina ?? 0;
+        await initHero(hero, index, resolver);
     }
 
     // Initialize enemy groups and creatures
