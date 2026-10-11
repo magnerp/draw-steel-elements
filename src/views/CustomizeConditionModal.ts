@@ -59,14 +59,21 @@ export class CustomizeConditionModal extends Modal {
         // Modal action buttons
         const buttonsContainer = modalContainer.createEl('div', { cls: 'modal-buttons' });
         const cancelButton = buttonsContainer.createEl('button', { text: 'Cancel' });
+        const resetButton = buttonsContainer.createEl('button', { text: 'Reset' });
+        resetButton.title = 'Back to the default look';
         const saveButton = buttonsContainer.createEl('button', { text: 'Save' });
 
         cancelButton.addEventListener('click', () => {
             this.close();
         });
 
+        resetButton.addEventListener('click', () => {
+            this.onUpdate({ key: this.conditionData.key });
+            this.close();
+        });
+
         saveButton.addEventListener('click', () => {
-            this.conditionData.color = colorInput.value;
+            // Only keep a color that was picked; the input shows white when there is none
             this.conditionData.effect = effectSelect.value;
             this.onUpdate(this.conditionData);
             this.close();

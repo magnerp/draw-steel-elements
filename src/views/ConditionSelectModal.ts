@@ -65,7 +65,7 @@ export class AddConditionsModal extends Modal {
 
 		// Icon preview
 		const iconEl = conditionEl.createEl('div', { cls: 'condition-icon-preview' });
-		setIcon(iconEl, condition.iconName);
+		this.updateIconPreview(iconEl, condition, this.styledCondition(condition.key));
 
 		// Label for the condition name
 		const label = conditionEl.createEl('div', { cls: 'condition-label', text: condition.displayName });
@@ -100,7 +100,7 @@ export class AddConditionsModal extends Modal {
 				conditionEl.classList.remove('selected');
 			} else {
 				// Select condition
-				const conditionData: Condition = { key: condition.key };
+				const conditionData = this.styledCondition(condition.key);
 				this.selectedConditions.set(condition.key, conditionData);
 				conditionEl.classList.add('selected');
 			}
@@ -116,6 +116,15 @@ export class AddConditionsModal extends Modal {
 		conditionEl.appendChild(iconEl);
 		conditionEl.appendChild(label);
 		conditionEl.appendChild(customizeIconEl);
+	}
+
+	// A new condition entry with the color/effect last picked for this condition
+	private styledCondition(key: string): Condition {
+		const style = this.conditionManager.getStyle(key);
+		const conditionData: Condition = { key };
+		if (style?.color) conditionData.color = style.color;
+		if (style?.effect) conditionData.effect = style.effect;
+		return conditionData;
 	}
 
 	// Updates the icon preview with customizations
@@ -151,7 +160,7 @@ export class AddConditionsModal extends Modal {
 		let conditionData = this.selectedConditions.get(conditionKey);
 		if (!conditionData) {
 			// If condition is not selected yet, create default condition data and select it
-			conditionData = { key: conditionKey };
+			conditionData = this.styledCondition(conditionKey);
 			this.selectedConditions.set(conditionKey, conditionData);
 			// Also mark the condition as selected
 			const conditionEl = iconEl.parentElement;
@@ -167,6 +176,7 @@ export class AddConditionsModal extends Modal {
 			updatedCondition => {
 				this.selectedConditions.set(conditionKey, updatedCondition);
 				this.updateIconPreview(iconEl, conditionConfig, updatedCondition);
+				void this.conditionManager.setStyle(conditionKey, updatedCondition);
 			}
 		);
 		customizeModal.open();

@@ -1,7 +1,10 @@
+import {ConditionStyle} from "@utils/Conditions";
+
 export interface DSESettings {
 	compendiumReleaseTag?: string; // Optional: if not set, fetch the latest release
 	compendiumDestinationDirectory: string;
 	defaultImagePath: string;
+	conditionStyles?: Record<string, ConditionStyle>; // Last color/effect picked per condition key
 }
 
 export const DEFAULT_SETTINGS: DSESettings = {

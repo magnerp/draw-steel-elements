@@ -36,7 +36,10 @@ export class InitiativeProcessor {
     constructor(plugin: DrawSteelAdmonitionPlugin) {
         this.plugin = plugin;
         this.app = plugin.app;
-        this.conditionManager = new ConditionManager();
+        this.conditionManager = new ConditionManager(
+            () => (this.plugin.settings.conditionStyles ??= {}),
+            () => this.plugin.saveSettings()
+        );
     }
 
     public async postProcess(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> {
@@ -412,6 +415,10 @@ export class InitiativeProcessor {
                         imgEl.createEl("img", {attr: {src: imgSrc, alt: creature.name}});
                     })
 
+                // Name below the image, so creatures sharing a token can be told apart
+                cellEl.createEl("div", {cls: "instance-name", text: creature.name})
+                    .title = `${creature.name} #${instance.id}`;
+
                 // Conditions of this instance, below the image (display only; edit them in the detail row)
                 const cellConditionsEl = cellEl.createEl("div", {cls: "instance-conditions"});
                 this.buildInstanceConditionIcons(cellConditionsEl, instance);
@@ -603,6 +610,15 @@ export class InitiativeProcessor {
             const maxStamina = this.isHero(character)
                 ? (character as Hero).max_stamina
                 : creature?.max_stamina ?? 0;
+
+            // Creatures other than heroes die at 0 stamina, shown like a dead minion
+            if (!this.isHero(character) && currentStamina <= 0 && tempStamina <= 0) {
+                staminaEl.textContent = `DEAD`;
+                staminaEl.style.color = 'crimson';
+                staminaEl.removeClass("is-winded");
+                staminaEl.title = "";
+                return;
+            }
 
             let displayText = `${currentStamina}`;
             if (tempStamina > 0) {

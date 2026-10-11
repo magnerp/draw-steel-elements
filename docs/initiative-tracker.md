@@ -377,6 +377,7 @@ The stamina modal shows this for both heroes and enemies:
 
 In the tracker itself, a hero or enemy at or below the winded threshold gets a **Winded** tag next to their stamina.
 A hero at 0 stamina or less gets a red **Dying** tag instead (or **Dead** at negative half their maximum).
+A creature that isn't a hero shows **DEAD** at 0 stamina, like a dead minion.
 Winded status is display only; it does not add the Winded condition for you. Creatures with `squad_role: minion`
 never show winded values (in the modal or the tracker), since minions don't use them. Captains and other creatures do.
 
@@ -398,6 +399,9 @@ Optionally, you can customize the appearance of the condition:
 	- Click the "cog" icon when hovering over the condition in the "Add Conditions" modal **OR**
 	- Double-click the condition in the "Add Conditions" modal.
 - Change the color or effect with the provided selectors.
+
+The color and effect you save are remembered for that condition, so it looks the same the next time you add it
+to any hero or creature, in any note. Click **Reset** in the customization modal to go back to the default look.
 
 Removing a Condition:
 
