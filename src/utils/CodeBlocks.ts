@@ -4,6 +4,9 @@ import {NegotiationData} from "@model/NegotiationData";
 import {StaminaBar} from "@model/StaminaBar";
 import {Counter} from "@model/Counter";
 
+// Obsidian sets `el` on the context at runtime, but it's not in the public typings
+type ContextWithEl = MarkdownPostProcessorContext & { el: HTMLElement };
+
 export class CodeBlocks {
 	static async updateInitiativeTracker(app: App, data: EncounterData, ctx: MarkdownPostProcessorContext): Promise<void> {
 		return CodeBlocks.updateCodeBlock(app, serializeEncounter(data), ctx, "ds-initiative");
@@ -55,7 +58,7 @@ export class CodeBlocks {
 		for (let selectionKey in selection) {
 			// console.log(selection[selectionKey].text);
 			// console.log(ctx.getSectionInfo(ctx.el).text);
-			if (selection[selectionKey].text === ctx.getSectionInfo(ctx.el)?.text) {
+			if (selection[selectionKey].text === ctx.getSectionInfo((ctx as ContextWithEl).el)?.text) {
 				await this.updateCanvasCard(app, canvas, selection[selectionKey], data, language);
 				return;
 			}
@@ -80,14 +83,13 @@ export class CodeBlocks {
 		return;
 	}
 
-	// TODO: Figure out the correct implementation of MarkdownPostProcessorContext
-	// to use there as it doesn't have an el property, or otherwise figure out
-	// how to ensure ctx.el doesn't complain during a npx tsc -noEmit -skipLibCheck
+	// TODO: relies on the undocumented ctx.el (see ContextWithEl); passing the code block's
+	// own el from each processor would avoid that
 	static async updateMarkdownCodeBlock(app: App, file: TFile, data: any, ctx: MarkdownPostProcessorContext, language: string): Promise<void> {
 		const content = await app.vault.read(file);
 		const lines = content.split('\n');
 
-		const section = ctx.getSectionInfo(ctx.el);
+		const section = ctx.getSectionInfo((ctx as ContextWithEl).el);
 		if (!section) return;
 
 		const {lineStart, lineEnd} = section;
