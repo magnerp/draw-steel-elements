@@ -341,6 +341,7 @@ export class InitiativeProcessor {
                 const cellEl = instancesGrid.createEl("div", {cls: "creature-instance-cell"});
 
                 const instanceKey = `${creatureIndex}-${instance.id}`;
+                cellEl.dataset.instanceKey = instanceKey;
 
                 // Handle selection highlighting
                 if (group.selectedInstanceKey === instanceKey) {
@@ -354,6 +355,10 @@ export class InitiativeProcessor {
                     .then((imgSrc) => {
                         imgEl.createEl("img", {attr: {src: imgSrc, alt: creature.name}});
                     })
+
+                // Conditions of this instance, below the image (display only; edit them in the detail row)
+                const cellConditionsEl = cellEl.createEl("div", {cls: "instance-conditions"});
+                this.buildInstanceConditionIcons(cellConditionsEl, instance);
 
                 // Display health status below the image
                 const staminaEl = cellEl.createEl("div", {cls: "instance-stamina"});
@@ -420,7 +425,16 @@ export class InitiativeProcessor {
 
         // Bottom: Conditions
         const conditionsEl = infoEl.createEl("div", {cls: "character-conditions"});
-        this.buildConditionIcons(conditionsEl, instance, data, ctx);
+        this.buildConditionIcons(conditionsEl, instance, data, ctx, () => {
+            const instanceKey = `${group.creatures.indexOf(creature)}-${instance.id}`;
+            const cellConditionsEl = container.parentElement?.querySelector(
+                `.creature-instance-cell[data-instance-key="${instanceKey}"] .instance-conditions`
+            );
+            if (cellConditionsEl instanceof HTMLElement) {
+                cellConditionsEl.empty();
+                this.buildInstanceConditionIcons(cellConditionsEl, instance);
+            }
+        });
 
         // Right: Health Info
         const healthEl = container.createEl("div", {cls: "character-health"});
@@ -551,45 +565,20 @@ export class InitiativeProcessor {
         container: HTMLElement,
         character: Hero | CreatureInstance,
         data: EncounterData,
-        ctx: MarkdownPostProcessorContext
+        ctx: MarkdownPostProcessorContext,
+        onChange?: () => void
     ): void {
         const conditions = character.conditions || [];
 
         conditions.forEach((conditionEntry) => {
-            let conditionKey: string;
-            let conditionData: Condition | null = null;
-            if (typeof conditionEntry === "string") {
-                conditionKey = conditionEntry;
-            } else if (typeof conditionEntry === "object" && conditionEntry.key) {
-                conditionKey = conditionEntry.key;
-                conditionData = conditionEntry;
-            } else {
-                return;
-            }
-
-            const condition = this.conditionManager.getAnyConditionByKey(conditionKey);
-            if (condition) {
-                const iconEl = container.createEl("div", {cls: "condition-icon"});
-                setIcon(iconEl, condition.iconName);
-                iconEl.title = condition.displayName;
-
-                // Apply color and effect customizations
-                if (conditionData) {
-                    if (conditionData.color) {
-                        iconEl.style.color = conditionData.color;
-                    }
-                    if (conditionData.effect) {
-                        iconEl.classList.add(`condition-effect-${conditionData.effect}`);
-                    }
-                }
-
-                iconEl.addEventListener("click", () => {
-                    character.conditions = conditions.filter((entry) => entry !== conditionEntry);
-                    container.empty();
-                    this.buildConditionIcons(container, character, data, ctx);
-                    CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
-                });
-            }
+            const iconEl = this.renderConditionIcon(container, conditionEntry);
+            iconEl?.addEventListener("click", () => {
+                character.conditions = conditions.filter((entry) => entry !== conditionEntry);
+                container.empty();
+                this.buildConditionIcons(container, character, data, ctx, onChange);
+                onChange?.();
+                CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
+            });
         });
 
         const addConditionEl = container.createEl("div", {cls: "add-condition-icon"});
@@ -603,12 +592,51 @@ export class InitiativeProcessor {
                 (newConditions) => {
                     character.conditions = (character.conditions || []).concat(newConditions);
                     container.empty();
-                    this.buildConditionIcons(container, character, data, ctx);
+                    this.buildConditionIcons(container, character, data, ctx, onChange);
+                    onChange?.();
                     CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
                 }
             );
             addConditionsModal.open();
         });
+    }
+
+    /** Small, display-only condition icons for a creature instance cell in the grid. */
+    private buildInstanceConditionIcons(container: HTMLElement, instance: CreatureInstance): void {
+        (instance.conditions || []).forEach((conditionEntry) => this.renderConditionIcon(container, conditionEntry));
+    }
+
+    /** Renders one condition icon (with its color/effect customizations); null if the condition is unknown. */
+    private renderConditionIcon(container: HTMLElement, conditionEntry: string | Condition): HTMLElement | null {
+        let conditionKey: string;
+        let conditionData: Condition | null = null;
+        if (typeof conditionEntry === "string") {
+            conditionKey = conditionEntry;
+        } else if (typeof conditionEntry === "object" && conditionEntry.key) {
+            conditionKey = conditionEntry.key;
+            conditionData = conditionEntry;
+        } else {
+            return null;
+        }
+
+        const condition = this.conditionManager.getAnyConditionByKey(conditionKey);
+        if (!condition) {
+            return null;
+        }
+        const iconEl = container.createEl("div", {cls: "condition-icon"});
+        setIcon(iconEl, condition.iconName);
+        iconEl.title = condition.displayName;
+
+        // Apply color and effect customizations
+        if (conditionData) {
+            if (conditionData.color) {
+                iconEl.style.color = conditionData.color;
+            }
+            if (conditionData.effect) {
+                iconEl.classList.add(`condition-effect-${conditionData.effect}`);
+            }
+        }
+        return iconEl;
     }
 
     private isHero(character: Hero | CreatureInstance): character is Hero {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Initiative tracker: creature instances in the enemy group grid (including minions) show their conditions as
+  small icons under the portrait.
 - Dying heroes: the stamina window's bar turns red when the change would leave a hero dying, and the
   tracker and party rows show a red "Dying" tag (or "Dead") next to the hero's stamina.
 - New `ds-party` block: define your heroes once in a party note and link encounters to it with

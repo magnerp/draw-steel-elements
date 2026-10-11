@@ -273,6 +273,8 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 - **Turn Indicator**: Similar to heroes, click on the circle icon next to the enemy group's name.
 - **Creature Grid**:
 	- **Selection**: Click on a creature instance to view its details.
+	- **Conditions**: Each instance's conditions show as small icons under its portrait. Add or remove them in the
+	  details row of the selected instance.
 	- **Health Management**:
 		- **Regular Creatures**: Double-click on a creature instance to open the health management modal.
 		- **Minions**: Click on the stamina display of the minion group to open the Minion Stamina Pool modal.
