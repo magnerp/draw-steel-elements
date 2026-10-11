@@ -646,6 +646,22 @@ code.dsa {
 	margin-top: 0;
 }
 
+.remove-group-btn {
+	display: flex;
+	cursor: pointer;
+	color: var(--text-faint);
+	visibility: hidden;
+}
+
+.enemy-group:hover .remove-group-btn,
+.is-mobile .remove-group-btn {
+	visibility: visible;
+}
+
+.remove-group-btn:hover {
+	color: var(--text-error);
+}
+
 /* Creature Group */
 
 .creature-group {

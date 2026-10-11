@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Initiative tracker: enemy groups can be removed from the tracker with a trash icon next to the group name
+  (shown on hover, asks for confirmation).
 - Initiative tracker: no longer flickers after each action (selecting a creature, turns, malice, conditions).
   The re-render after the tracker saves is built from the state it just wrote instead of re-reading notes.
 - Minion stamina pool: damage beyond the remaining pool is capped at the pool, so overkill damage can always

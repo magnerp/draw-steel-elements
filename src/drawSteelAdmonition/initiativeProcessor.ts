@@ -17,6 +17,7 @@ import {
     resetEncounter,
 } from "./EncounterData";
 import {ResetEncounterModal} from "@views/ResetEncounterModal";
+import {ConfirmModal} from "@views/ConfirmModal";
 import {MinionStaminaPoolModal} from "@views/MinionStaminaPoolModal";
 import {StaminaBar} from "@model/StaminaBar";
 import {applyParty, PartyStore} from "@drawSteelAdmonition/party/PartyData";
@@ -289,6 +290,24 @@ export class InitiativeProcessor {
         // Group Header with Name and Turn Indicator
         const groupHeader = groupEl.createEl("div", {cls: "group-header"});
         groupHeader.createEl("h4", {text: group.name});
+
+        // Remove the whole group from the encounter
+        const removeGroupEl = groupHeader.createEl("div", {cls: "remove-group-btn"});
+        setIcon(removeGroupEl, "trash-2");
+        removeGroupEl.title = "Remove group from encounter";
+        removeGroupEl.addEventListener("click", () => {
+            new ConfirmModal(
+                this.app,
+                "Remove enemy group?",
+                `Remove '${group.name}' and all its creatures from this encounter? This can't be undone from the tracker.`,
+                "Remove",
+                () => {
+                    data.enemy_groups = data.enemy_groups.filter((g) => g !== group);
+                    container.remove();
+                    CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
+                }
+            ).open();
+        });
 
         // Detailed Creature Row Container
         const detailRowContainer = groupEl.createEl("div", {cls: "creature-detail-row"});

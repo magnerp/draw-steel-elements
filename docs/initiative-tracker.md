@@ -271,6 +271,8 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 ### Enemy Groups
 
 - **Turn Indicator**: Similar to heroes, click on the circle icon next to the enemy group's name.
+- **Remove Group**: Hover over a group and click the trash icon next to its name to remove the whole group (all its
+  creatures) from the encounter. You'll be asked to confirm.
 - **Creature Grid**:
 	- **Selection**: Click on a creature instance to view its details.
 	- **Conditions**: Each instance's conditions show as small icons under its portrait. Add or remove them in the
