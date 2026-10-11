@@ -266,6 +266,21 @@ Click the "Reset Encounter State" button to clear all "state" data from the trac
 - **Full Heal**: Restores current stamina to maximum.
 - **Spend Recovery**: Increases current stamina by one-third of the maximum stamina.
 
+#### Winded
+
+A hero or creature is *winded* when its stamina is equal to or less than half of its maximum (rounded down).
+The stamina modal shows this for both heroes and enemies:
+
+- A hatched **Winded** zone on the stamina bar.
+- A line under the bar with the threshold (for example, "Winded at 40 or less"). For heroes this also lists the
+  Dying (0 or less) and Dead (negative half maximum) thresholds.
+- A live badge (**Winded**, **Dying**, or **Dead**) for the stamina the pending change would leave. The remaining
+  stamina on the bar turns yellow while winded.
+
+In the tracker itself, a hero or enemy at or below the winded threshold gets a **Winded** tag next to their stamina.
+Winded status is display only; it does not add the Winded condition for you. Creatures with `squad_role: minion`
+never show winded values (in the modal or the tracker), since minions don't use them. Captains and other creatures do.
+
 ### Conditions
 
 Conditions represent status effects affecting heroes or creatures, such as "dazed" or "slowed".

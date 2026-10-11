@@ -4,6 +4,7 @@ import {ConditionManager} from "@utils/Conditions";
 import {AddConditionsModal} from "@views/ConditionSelectModal";
 import {Images} from "@utils/Images";
 import {CodeBlocks} from "@utils/CodeBlocks";
+import {Stamina} from "@utils/Stamina";
 import {
     Condition,
     Creature,
@@ -396,6 +397,7 @@ export class InitiativeProcessor {
         container: HTMLElement
     ) {
         const staminaBar = StaminaBar.fromCreature(instance, creature);
+        const showWinded = creature.squad_role !== "minion";
         return new StaminaEditModal(this.app, staminaBar, false, creature.name, () => {
             staminaBar.updateCreature(instance);
             this.updateStaminaDisplay(staminaEl, instance, creature);
@@ -408,7 +410,7 @@ export class InitiativeProcessor {
             if (gridCell) {
                 this.updateStaminaDisplay(gridCell as HTMLElement, instance, creature);
             }
-        });
+        }, showWinded);
     }
 
     private updateTurnIndicator(el: HTMLElement, hasTakenTurn: boolean): void {
@@ -459,6 +461,14 @@ export class InitiativeProcessor {
                 staminaEl.style.color = "green";
             } else {
                 staminaEl.style.color = "";
+            }
+
+            // Winded: at or below half of max stamina (heroes and enemies, but not minions)
+            const winded = creature?.squad_role !== "minion" && Stamina.isWinded(currentStamina, maxStamina);
+            staminaEl.toggleClass("is-winded", winded);
+            staminaEl.title = winded ? `Winded (half of ${maxStamina} stamina is ${Stamina.windedThreshold(maxStamina)})` : "";
+            if (winded && staminaEl.hasClass("character-stamina")) {
+                staminaEl.createEl("span", {cls: "stamina-winded-tag", text: "Winded"});
             }
         }
     }

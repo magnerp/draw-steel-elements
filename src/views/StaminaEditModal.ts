@@ -1,11 +1,15 @@
 import { App, Modal, setIcon } from "obsidian";
 import {StaminaBar} from "@model/StaminaBar";
+import {Stamina} from "@utils/Stamina";
 
 export class StaminaEditModal extends Modal {
 	private staminaBar: StaminaBar;
 	private isHero: boolean;
 	private name: string;
 	private updateCallback: () => void;
+	private statusBadge: HTMLElement | null = null;
+	// Winded doesn't apply to minions (squad_role: minion)
+	private showWinded: boolean;
 
 	// New properties for pending STAMINA and Temp STAMINA changes
 	private pendingStaminaChange: number = 0;
@@ -16,13 +20,15 @@ export class StaminaEditModal extends Modal {
 		staminaBar: StaminaBar,
 		isHero: boolean,
 		name: string,
-		updateCallback: () => void
+		updateCallback: () => void,
+		showWinded: boolean = true
 	) {
 		super(app);
 		this.staminaBar = staminaBar;
 		this.isHero = isHero;
 		this.name = name;
 		this.updateCallback = updateCallback;
+		this.showWinded = showWinded;
 	}
 
 	onOpen() {
@@ -44,9 +50,29 @@ export class StaminaEditModal extends Modal {
 		if (this.isHero) {
 			staminaBarContainer.createEl('div', { cls: 'stamina-bar-overlay', text: "Dying" });
 		}
+		// Winded zone: the stamina range from 1 up to half of max (heroes and enemies)
+		const windedThreshold = Stamina.windedThreshold(maxStamina);
+		const barTotalLength = maxStamina - negativeStaminaLimit;
+		if (this.showWinded && windedThreshold > 0 && barTotalLength > 0) {
+			const windedOverlay = staminaBarContainer.createEl('div', { cls: 'stamina-bar-winded-overlay' });
+			windedOverlay.style.left = `calc(${(-negativeStaminaLimit / barTotalLength) * 100}% + 1px)`;
+			windedOverlay.style.width = `${(windedThreshold / barTotalLength) * 100}%`;
+			windedOverlay.createEl('span', { cls: 'stamina-bar-winded-label', text: 'Winded' });
+		}
 		const staminaBar = staminaBarContainer.createEl('div', { cls: 'stamina-bar' });
 		const staminaBarFillLeft = staminaBar.createEl('div', { cls: 'stamina-bar-fill-left' });
 		const staminaBarFillRight = staminaBar.createEl('div', { cls: 'stamina-bar-fill-right' });
+
+		// Threshold summary and live status for the stamina the pending change would leave
+		// (minions have nothing to show here, so they get no row)
+		if (this.showWinded || this.isHero) {
+			const statusRow = contentEl.createEl('div', { cls: 'stamina-status-row' });
+			const thresholdText = this.isHero
+				? `Winded at ${windedThreshold} or less · Dying at 0 or less · Dead at ${negativeStaminaLimit}`
+				: `Winded at ${windedThreshold} or less`;
+			statusRow.createEl('span', { cls: 'stamina-threshold-info', text: thresholdText });
+			this.statusBadge = statusRow.createEl('span', { cls: 'stamina-status-badge' });
+		}
 
 		// Update the STAMINA bar display
 		this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight, negativeStaminaLimit, maxStamina);
@@ -284,26 +310,48 @@ export class StaminaEditModal extends Modal {
 		const barLength = maxStamina + dyingLength;
 		const adjustedCurrentStamina = this.staminaBar.current_stamina + dyingLength;
 
+		// Stamina that would remain if the pending change were applied
+		const resultingStamina = this.clampStamina(
+			this.staminaBar.current_stamina + this.pendingStaminaChange, negativeStaminaLimit, maxStamina);
+		const resultingWinded = this.showWinded && Stamina.isWinded(resultingStamina, maxStamina);
+		const remainingColor = resultingWinded ? 'var(--stamina-bar-color-winded, gold)' : 'limegreen';
+		this.updateStatusBadge(resultingStamina, maxStamina);
+
 		if (this.pendingStaminaChange > 0) {
 			// Healing
 			staminaBarFillLeft.style.width = `${((adjustedCurrentStamina) / barLength) * 100}%`;
-			staminaBarFillLeft.style.backgroundColor = 'limegreen';
+			staminaBarFillLeft.style.backgroundColor = remainingColor;
 			staminaBarFillRight.style.width = `${((this.pendingStaminaChange) / barLength) * 100}%`;
 			staminaBarFillRight.style.backgroundColor = 'deepskyblue';
 			staminaBarFillRight.style.borderRadius = '0 3px 3px 0';
 		} else if (this.pendingStaminaChange < 0) {
 			// Damage
 			staminaBarFillLeft.style.width = `${((adjustedCurrentStamina + this.pendingStaminaChange) / barLength) * 100}%`;
-			staminaBarFillLeft.style.backgroundColor = 'limegreen';
+			staminaBarFillLeft.style.backgroundColor = remainingColor;
 			staminaBarFillRight.style.width = `${(this.pendingStaminaChange / barLength) * -100}%`;
 			staminaBarFillRight.style.backgroundColor = 'crimson';
 			staminaBarFillRight.style.borderRadius = '3px 0 0 3px';
 		} else {
 			// No change
 			staminaBarFillLeft.style.width = `${(adjustedCurrentStamina / barLength) * 100}%`;
-			staminaBarFillLeft.style.backgroundColor = 'limegreen';
+			staminaBarFillLeft.style.backgroundColor = remainingColor;
 			staminaBarFillRight.style.width = `0%`;
 			staminaBarFillRight.style.backgroundColor = 'deepskyblue';
+		}
+	}
+
+	private updateStatusBadge(resultingStamina: number, maxStamina: number) {
+		if (!this.statusBadge) {
+			return;
+		}
+		const status = Stamina.status(resultingStamina, maxStamina, this.isHero);
+		const labels: Record<string, string> = { winded: 'Winded', dying: 'Dying', dead: 'Dead' };
+
+		this.statusBadge.empty();
+		this.statusBadge.removeClasses(['status-healthy', 'status-winded', 'status-dying', 'status-dead']);
+		this.statusBadge.addClass(`status-${status}`);
+		if (status !== 'healthy') {
+			this.statusBadge.setText(labels[status]);
 		}
 	}
 

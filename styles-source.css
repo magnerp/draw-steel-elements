@@ -859,6 +859,72 @@ code.dsa {
 	justify-content: center;
 }
 
+/* Winded zone (stamina from 1 up to half of max) */
+
+.stamina-bar-winded-overlay {
+	position: absolute;
+	top: 1px;
+	height: calc(100% - 2px);
+	z-index: 1;
+	pointer-events: none;
+	background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 1.41px, transparent 1px 6px);
+	box-shadow: 1px 0 0 0 var(--text-normal);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.stamina-bar-winded-label {
+	padding: 0 0.4em;
+	font-size: 0.7em;
+	line-height: 1.4em;
+	color: var(--text-normal);
+	background-color: var(--background-primary-alt);
+	border-radius: 10px;
+}
+
+/* Threshold summary and live status under the bar */
+
+.stamina-status-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 10px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.stamina-status-badge {
+	font-weight: bold;
+	padding: 0 0.6em;
+	border-radius: 10px;
+	min-height: 1.4em;
+}
+
+.stamina-status-badge.status-winded {
+	color: black;
+	background-color: var(--stamina-bar-color-winded);
+}
+
+.stamina-status-badge.status-dying,
+.stamina-status-badge.status-dead {
+	color: white;
+	background-color: var(--stamina-bar-color-dying);
+}
+
+/* Winded tag in the initiative tracker rows */
+
+.character-stamina .stamina-winded-tag {
+	display: block;
+	font-size: 0.7em;
+	text-align: center;
+	color: black;
+	background-color: var(--stamina-bar-color-winded);
+	border-radius: 10px;
+}
+
 .stamina-bar-fill-left {
 	position: relative;
 	height: calc(100% - 2px);

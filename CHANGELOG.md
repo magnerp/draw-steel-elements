@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Initiative tracker: the stamina (damage/healing) modal now shows the Winded value for heroes and
+  enemies: a hatched "Winded" zone on the bar, a "Winded at N or less" line (plus the Dying/Dead
+  thresholds for heroes), and a live Winded/Dying/Dead badge for the stamina the pending change would
+  leave. The remaining-stamina bar turns yellow while winded.
+- Initiative tracker: hero and enemy stamina in the tracker rows now shows a "Winded" tag at or below
+  half of max stamina. Creatures with `squad_role: minion` never show winded values.
+
 ## 6.0.2
 
 - Replaces the bundled zip library (JSZip -> fflate) used by the compendium download. JSZip's
