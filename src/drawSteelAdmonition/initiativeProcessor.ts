@@ -13,11 +13,14 @@ import {
     EnemyGroup,
     getWrittenEncounter,
     Hero,
+    initEnemyGroup,
     parseEncounterData,
     resetEncounter,
 } from "./EncounterData";
 import {ResetEncounterModal} from "@views/ResetEncounterModal";
 import {ConfirmModal} from "@views/ConfirmModal";
+import {AddEnemyGroupModal} from "@views/AddEnemyGroupModal";
+import {ReferenceResolver} from "@utils/ReferenceResolver";
 import {MinionStaminaPoolModal} from "@views/MinionStaminaPoolModal";
 import {StaminaBar} from "@model/StaminaBar";
 import {applyParty, PartyStore} from "@drawSteelAdmonition/party/PartyData";
@@ -131,6 +134,23 @@ export class InitiativeProcessor {
             new ResetEncounterModal(this.app, () => {
                 resetEncounter(data);
                 CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
+            }).open();
+        });
+
+        // Add Enemy Group Button
+        const addGroupButton = topActionBar.createEl("button", {
+            text: "Add Enemy Group",
+            cls: "add-enemy-group-button",
+        });
+        addGroupButton.addEventListener("click", () => {
+            new AddEnemyGroupModal(this.app, this.plugin.settings, async (group) => {
+                // Same setup as groups written in the YAML (statblocks, minion squads, instances)
+                const resolver = new ReferenceResolver(this.app, this.plugin.settings);
+                await initEnemyGroup(group, data.enemy_groups.length, resolver);
+                data.enemy_groups.push(group);
+                container.empty();
+                this.buildUI(container, data, ctx);
+                await CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
             }).open();
         });
 

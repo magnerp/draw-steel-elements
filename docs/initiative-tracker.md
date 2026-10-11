@@ -64,7 +64,8 @@ malice:
 The encounter data consists of three main sections:
 
 1. **Heroes**: Player characters participating in the encounter.
-2. **Enemy Groups**: Groups of enemies, each containing one or more types of creatures.
+2. **Enemy Groups**: Groups of enemies, each containing one or more types of creatures. Optional: you can leave
+   `enemy_groups` out and add groups from the tracker with **Add Enemy Group**.
 3. **Malice**: The current villain power level.
 
 ### Heroes
@@ -251,6 +252,12 @@ To define a minion group, set the `is_squad` field to `true` in the enemy group 
 
 Additionally, you can add another `creature` object to the Enemy group (squad) and set its `squad_role` to `captain`.  This has no effect right now, but may change in the future.
 
+**Automatic squads:** when a creature references a statblock whose role contains "minion" (for example
+`Minion Artillery`), the group is made a squad automatically: `is_squad` is set to `true`, the minion creature gets
+`squad_role: minion`, and another creature in the group (if any) gets `squad_role: captain`. This only happens when
+the group forms a valid squad (one minion creature type plus at most one other creature); other groups are left as
+written. `squad_role`s you set yourself are kept.
+
 ### Malice
 
 #### Fields
@@ -300,6 +307,20 @@ When the Stamina Pool of minions gets reduced to thresholds that would kill a mi
 ### Malice
 
 **Adjusting**: Use the up and down arrows next to the villain power display to increase or decrease the value.
+
+### Add Enemy Group
+
+Click **Add Enemy Group** at the top of the tracker to add a group without editing the YAML:
+
+1. Optionally enter a group name (it defaults to the first creature's name).
+2. In each creature row, start typing a monster name to get suggestions from the statblock notes in your vault
+   (notes with `stamina` in their frontmatter, or with "statblock" in their path), and set how many to add.
+   Once a statblock is picked, the row shows its stamina and a **Minion** tag for minions.
+3. Use **Add creature** for more creature types in the same group (for example minions and their captain).
+4. Click **Add Group**.
+
+The group is set up the same way as one written in the YAML, including [automatic squads](#minions-and-captains)
+for minion statblocks.
 
 ### Reset Round
 

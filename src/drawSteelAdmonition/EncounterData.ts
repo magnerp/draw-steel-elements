@@ -232,6 +232,233 @@ export function getWrittenEncounter(sourcePath: string, blockText: string): Enco
     return structuredClone(entry.data);
 }
 
+/** True if a resolved statblock has a role containing "minion" (e.g. "Minion Artillery"). */
+export function isMinionStatblock(statblock: any): boolean {
+    const roles = statblock?.roles;
+    const roleList: any[] = Array.isArray(roles) ? roles : roles != null ? [roles] : [];
+    return roleList.some((role) => typeof role === "string" && /minion/i.test(role));
+}
+
+/**
+ * Turns a group into a squad when its statblocks say it holds minions, filling in `squad_role`s
+ * that aren't set (minion statblocks become `minion`, another creature becomes `captain`).
+ * Groups that wouldn't form a valid squad (more than one minion type, or more than two creature
+ * types) are left as they are.
+ */
+function autoAssignSquad(group: EnemyGroup, isMinion: boolean[]): void {
+    const minionCount = isMinion.filter((minion) => minion).length;
+    if (minionCount === 0) {
+        return;
+    }
+    if (!group.is_squad) {
+        if (minionCount !== 1 || group.creatures.length > 2) {
+            return;
+        }
+        group.is_squad = true;
+    }
+    group.creatures.forEach((creature, index) => {
+        if (!creature.squad_role) {
+            creature.squad_role = isMinion[index] ? "minion" : "captain";
+        }
+    });
+}
+
+/**
+ * Validates and initializes one enemy group in place: resolves statblock references, makes minion
+ * groups into squads, and creates creature instances (or the minion stamina pool).
+ */
+export async function initEnemyGroup(group: EnemyGroup, groupIndex: number, resolver: ReferenceResolver): Promise<void> {
+    if (!group.name) {
+        throw new Error(`Enemy group at index ${groupIndex} is missing the 'name' field.`);
+    }
+    if (!group.creatures || !Array.isArray(group.creatures)) {
+        throw new Error(`Enemy group '${group.name}' has an invalid or missing 'creatures' field.`);
+    }
+
+    // Resolve statblock references first: whether a creature is a minion comes from its statblock
+    const isMinion: boolean[] = [];
+    for (const [creatureIndex, creature] of group.creatures.entries()) {
+        creature.statblock = normalizeLinkRef(creature.statblock);
+        let resolved: any = null;
+        if (typeof creature.statblock === 'string') {
+            try {
+                resolved = await resolver.resolveReferences(creature.statblock);
+                if (resolved) {
+                    if (!creature.name && resolved.name) creature.name = resolved.name;
+                    if (!creature.max_stamina && resolved.stamina) creature.max_stamina = +resolved.stamina;
+                    if (!creature.image && resolved.image) creature.image = resolved.image;
+                }
+            } catch (e) {
+                const message = `
+Failed to resolve creature statblock reference at index ${creatureIndex} (${creature.statblock}):
+    ${e.message}
+
+Are there multiple instances of the '${creature.statblock}' file in your vault? If so, please specify the full path.
+`;
+                throw new Error(message);
+            }
+        }
+        isMinion.push(isMinionStatblock(resolved));
+    }
+
+    group.has_taken_turn = group.has_taken_turn ?? false;
+    autoAssignSquad(group, isMinion);
+    group.is_squad = group.is_squad ?? false;
+
+    if (group.is_squad) {
+        // Squad-specific validation
+        if (group.creatures.length > 2) {
+            throw new Error(
+                `Squad '${group.name}' can have at most two creatures (minions and an optional captain).`
+            );
+        }
+        let minionCount = 0;
+        let captainCount = 0;
+        group.creatures.forEach((creature) => {
+            if (!creature.squad_role) {
+                throw new Error(
+                    `Creature '${creature.name}' in squad '${group.name}' must have a 'squad_role' of 'minion' or 'captain'.`
+                );
+            }
+            if (creature.squad_role === "minion") {
+                minionCount += 1;
+            } else if (creature.squad_role === "captain") {
+                captainCount += 1;
+            } else {
+                throw new Error(
+                    `Creature '${creature.name}' in squad '${group.name}' has an invalid 'squad_role' value.`
+                );
+            }
+        });
+        if (minionCount === 0) {
+            throw new Error(`Squad '${group.name}' must have at least one minion creature.`);
+        }
+        if (minionCount > 1) {
+            throw new Error(`Squad '${group.name}' can have only one minion creature type.`);
+        }
+        if (captainCount > 1) {
+            throw new Error(`Squad '${group.name}' can have at most one captain creature.`);
+        }
+    }
+
+    for (const [creatureIndex, creature] of group.creatures.entries()) {
+        if (!creature.name) {
+            throw new Error(
+                `Creature at index ${creatureIndex} in group '${group.name}' is missing the 'name' field.`
+            );
+        }
+        if (typeof creature.amount !== "number") {
+            throw new Error(
+                `Creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'amount' field.`
+            );
+        }
+        if (typeof creature.max_stamina !== "number") {
+            throw new Error(
+                `Creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'max_stamina' field.`
+            );
+        }
+
+        creature.isHero = false;
+
+        // Initialize instances
+        if (group.is_squad && creature.squad_role === "minion") {
+            // For minions in a squad, they share a stamina pool
+            // Initialize the shared stamina pool
+            if (group.minion_stamina_pool == null) {
+                // Initialize the pool to total stamina (max_stamina * amount)
+                group.minion_stamina_pool = creature.max_stamina * creature.amount;
+            }
+            // Initialize instances for minions (for conditions only)
+            if (!creature.instances || creature.instances.length !== creature.amount) {
+                creature.instances = [];
+                for (let i = 0; i < creature.amount; i++) {
+                    creature.instances.push({
+                        id: i + 1,
+                        conditions: [],
+                        // current_stamina and temp_stamina are not used for minions in squads
+                    });
+                }
+            } else {
+                // Validate existing instances
+                creature.instances.forEach((instance, instanceIndex) => {
+                    if (typeof instance.id !== "number") {
+                        throw new Error(
+                            `Instance at index ${instanceIndex} of creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'id' field.`
+                        );
+                    }
+                    // For minions, we don't need to set current_stamina or temp_stamina
+                    // Update conditions handling
+                    instance.conditions =
+                        instance.conditions?.map((cond) => {
+                            if (typeof cond === "string") {
+                                return {
+                                    key: cond,
+                                    color: undefined,
+                                    effect: undefined
+                                }
+                            } else if (typeof cond === "object" && cond.key) {
+                                return {
+                                    key: cond.key,
+                                    color: cond.color ?? undefined,
+                                    effect: cond.effect ?? undefined,
+                                };
+                            } else {
+                                throw new Error(
+                                    `Invalid condition format for instance '${instance.id}' of creature '${creature.name}'.`
+                                );
+                            }
+                        }) ?? [];
+                });
+            }
+        } else {
+            // For regular creatures and captains
+            if (!creature.instances || creature.instances.length !== creature.amount) {
+                creature.instances = [];
+                for (let i = 0; i < creature.amount; i++) {
+                    creature.instances.push({
+                        id: i + 1,
+                        current_stamina: creature.max_stamina,
+                        temp_stamina: 0,
+                        conditions: [],
+                    });
+                }
+            } else {
+                // Validate existing instances
+                creature.instances.forEach((instance, instanceIndex) => {
+                    if (typeof instance.id !== "number") {
+                        throw new Error(
+                            `Instance at index ${instanceIndex} of creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'id' field.`
+                        );
+                    }
+                    instance.current_stamina = instance.current_stamina ?? creature.max_stamina;
+                    instance.temp_stamina = instance.temp_stamina ?? 0;
+                    // Update conditions handling
+                    instance.conditions =
+                        instance.conditions?.map((cond) => {
+                            if (typeof cond === "string") {
+                                return {
+                                    key: cond,
+                                    color: undefined,
+                                    effect: undefined
+                                }
+                            } else if (typeof cond === "object" && cond.key) {
+                                return {
+                                    key: cond.key,
+                                    color: cond.color ?? undefined,
+                                    effect: cond.effect ?? undefined,
+                                };
+                            } else {
+                                throw new Error(
+                                    `Invalid condition format for instance '${instance.id}' of creature '${creature.name}'.`
+                                );
+                            }
+                        }) ?? [];
+                });
+            }
+        }
+    }
+}
+
 export async function parseEncounterData(source: string, app: App, settings: DSESettings): Promise<EncounterData> {
     let data: EncounterData;
 
@@ -263,8 +490,11 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
         throw new Error("Invalid data: 'heroes' field is missing or is not a list.");
     }
 
-    // Validate 'enemy_groups' field
-    if (!data.enemy_groups || !Array.isArray(data.enemy_groups)) {
+    // Validate 'enemy_groups' field (optional: groups can be added from the tracker)
+    if (data.enemy_groups == null) {
+        data.enemy_groups = [];
+    }
+    if (!Array.isArray(data.enemy_groups)) {
         throw new Error("Invalid data: 'enemy_groups' field is missing or is not a list.");
     }
 
@@ -275,188 +505,7 @@ export async function parseEncounterData(source: string, app: App, settings: DSE
 
     // Initialize enemy groups and creatures
     for (const [groupIndex, group] of data.enemy_groups.entries()) {
-        if (!group.name) {
-            throw new Error(`Enemy group at index ${groupIndex} is missing the 'name' field.`);
-        }
-        if (!group.creatures || !Array.isArray(group.creatures)) {
-            throw new Error(`Enemy group '${group.name}' has an invalid or missing 'creatures' field.`);
-        }
-
-        group.has_taken_turn = group.has_taken_turn ?? false;
-        group.is_squad = group.is_squad ?? false;
-
-        if (group.is_squad) {
-            // Squad-specific validation
-            if (group.creatures.length > 2) {
-                throw new Error(
-                    `Squad '${group.name}' can have at most two creatures (minions and an optional captain).`
-                );
-            }
-            let minionCount = 0;
-            let captainCount = 0;
-            group.creatures.forEach((creature) => {
-                if (!creature.squad_role) {
-                    throw new Error(
-                        `Creature '${creature.name}' in squad '${group.name}' must have a 'squad_role' of 'minion' or 'captain'.`
-                    );
-                }
-                if (creature.squad_role === "minion") {
-                    minionCount += 1;
-                } else if (creature.squad_role === "captain") {
-                    captainCount += 1;
-                } else {
-                    throw new Error(
-                        `Creature '${creature.name}' in squad '${group.name}' has an invalid 'squad_role' value.`
-                    );
-                }
-            });
-            if (minionCount === 0) {
-                throw new Error(`Squad '${group.name}' must have at least one minion creature.`);
-            }
-            if (minionCount > 1) {
-                throw new Error(`Squad '${group.name}' can have only one minion creature type.`);
-            }
-            if (captainCount > 1) {
-                throw new Error(`Squad '${group.name}' can have at most one captain creature.`);
-            }
-        }
-
-        for (const [creatureIndex, creature] of group.creatures.entries()) {
-            creature.statblock = normalizeLinkRef(creature.statblock);
-            if (typeof creature.statblock === 'string') {
-                try {
-                    const resolved = await resolver.resolveReferences(creature.statblock);
-                    if (resolved) {
-                        if (!creature.name && resolved.name) creature.name = resolved.name;
-                        if (!creature.max_stamina && resolved.stamina) creature.max_stamina = +resolved.stamina;
-                        if (!creature.image && resolved.image) creature.image = resolved.image;
-                    }
-                } catch (e) {
-                    const message = `
-Failed to resolve creature statblock reference at index ${creatureIndex} (${creature.statblock}):
-    ${e.message}
-
-Are there multiple instances of the '${creature.statblock}' file in your vault? If so, please specify the full path.
-`;
-                    throw new Error(message);
-                }
-            }
-
-            if (!creature.name) {
-                throw new Error(
-                    `Creature at index ${creatureIndex} in group '${group.name}' is missing the 'name' field.`
-                );
-            }
-            if (typeof creature.amount !== "number") {
-                throw new Error(
-                    `Creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'amount' field.`
-                );
-            }
-            if (typeof creature.max_stamina !== "number") {
-                throw new Error(
-                    `Creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'max_stamina' field.`
-                );
-            }
-
-            creature.isHero = false;
-
-            // Initialize instances
-            if (group.is_squad && creature.squad_role === "minion") {
-                // For minions in a squad, they share a stamina pool
-                // Initialize the shared stamina pool
-                if (group.minion_stamina_pool == null) {
-                    // Initialize the pool to total stamina (max_stamina * amount)
-                    group.minion_stamina_pool = creature.max_stamina * creature.amount;
-                }
-                // Initialize instances for minions (for conditions only)
-                if (!creature.instances || creature.instances.length !== creature.amount) {
-                    creature.instances = [];
-                    for (let i = 0; i < creature.amount; i++) {
-                        creature.instances.push({
-                            id: i + 1,
-                            conditions: [],
-                            // current_stamina and temp_stamina are not used for minions in squads
-                        });
-                    }
-                } else {
-                    // Validate existing instances
-                    creature.instances.forEach((instance, instanceIndex) => {
-                        if (typeof instance.id !== "number") {
-                            throw new Error(
-                                `Instance at index ${instanceIndex} of creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'id' field.`
-                            );
-                        }
-                        // For minions, we don't need to set current_stamina or temp_stamina
-                        // Update conditions handling
-                        instance.conditions =
-                            instance.conditions?.map((cond) => {
-                                if (typeof cond === "string") {
-                                    return {
-                                        key: cond,
-                                        color: undefined,
-                                        effect: undefined
-                                    }
-                                } else if (typeof cond === "object" && cond.key) {
-                                    return {
-                                        key: cond.key,
-                                        color: cond.color ?? undefined,
-                                        effect: cond.effect ?? undefined,
-                                    };
-                                } else {
-                                    throw new Error(
-                                        `Invalid condition format for instance '${instance.id}' of creature '${creature.name}'.`
-                                    );
-                                }
-                            }) ?? [];
-                    });
-                }
-            } else {
-                // For regular creatures and captains
-                if (!creature.instances || creature.instances.length !== creature.amount) {
-                    creature.instances = [];
-                    for (let i = 0; i < creature.amount; i++) {
-                        creature.instances.push({
-                            id: i + 1,
-                            current_stamina: creature.max_stamina,
-                            temp_stamina: 0,
-                            conditions: [],
-                        });
-                    }
-                } else {
-                    // Validate existing instances
-                    creature.instances.forEach((instance, instanceIndex) => {
-                        if (typeof instance.id !== "number") {
-                            throw new Error(
-                                `Instance at index ${instanceIndex} of creature '${creature.name}' in group '${group.name}' is missing or has an invalid 'id' field.`
-                            );
-                        }
-                        instance.current_stamina = instance.current_stamina ?? creature.max_stamina;
-                        instance.temp_stamina = instance.temp_stamina ?? 0;
-                        // Update conditions handling
-                        instance.conditions =
-                            instance.conditions?.map((cond) => {
-                                if (typeof cond === "string") {
-                                    return {
-                                        key: cond,
-                                        color: undefined,
-                                        effect: undefined
-                                    }
-                                } else if (typeof cond === "object" && cond.key) {
-                                    return {
-                                        key: cond.key,
-                                        color: cond.color ?? undefined,
-                                        effect: cond.effect ?? undefined,
-                                    };
-                                } else {
-                                    throw new Error(
-                                        `Invalid condition format for instance '${instance.id}' of creature '${creature.name}'.`
-                                    );
-                                }
-                            }) ?? [];
-                    });
-                }
-            }
-        }
+        await initEnemyGroup(group, groupIndex, resolver);
     }
 
     data.malice = data.malice ?? {value: 0};

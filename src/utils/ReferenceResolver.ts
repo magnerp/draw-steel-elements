@@ -60,6 +60,7 @@ export class ReferenceResolver {
                     name: frontmatter.item_name ?? frontmatter.name ?? file.basename,
                     stamina: frontmatter.stamina,
                     image: frontmatter.image,
+                    roles: frontmatter.roles,
                 };
             }
             throw new Error(`No Draw Steel Elements code block (ds-*) or frontmatter 'stamina' found in ${file.path}`);
