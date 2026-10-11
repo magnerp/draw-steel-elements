@@ -223,7 +223,8 @@ export class MinionStaminaPoolModal extends Modal {
 		this.updateActionButton(actionButton, warningIcon);
 		actionButton.addEventListener("click", () => {
 			const newStamina = poolCurrentStamina + this.pendingStaminaChange;
-			const maxStamina = this.creature.instances?.filter((inst) => !inst.isDead).length ?? 0 * minionMaxStamina;
+			// Max pool is (alive minions) * (stamina per minion), matching `poolMaxStamina` above
+			const maxStamina = aliveMinions * minionMaxStamina;
 			this.group.minion_stamina_pool = Math.min(maxStamina, Math.max(0, newStamina));
 
 			// Update the minion instances based on the selected checkboxes
