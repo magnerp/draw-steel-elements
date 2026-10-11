@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Initiative tracker: each creature in the enemy grid shows its name under its image.
+- Initiative tracker: more padding inside the **Winded** and **Dying** tags next to stamina.
+- Initiative tracker: a creature (not a hero) at 0 stamina now shows **DEAD**, like a dead minion.
+- Add Conditions window: the color and effect you pick for a condition are remembered (saved in the plugin
+  settings) and used the next time you add that condition, for any creature in any note. **Reset** in the
+  customize window goes back to the default look.
 - Initiative tracker: middle-click a creature in the enemy grid (or a hero's row) to open the Add Conditions window
   for it, regardless of the current selection.
 - Initiative tracker: Ctrl+right-click a creature to kill it. A minion is marked dead on its own and its stamina is

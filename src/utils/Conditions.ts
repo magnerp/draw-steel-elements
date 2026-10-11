@@ -4,7 +4,22 @@ export interface ConditionConfig {
 	iconName: string;
 }
 
+/** A condition's customized look, remembered across creatures and notes. */
+export interface ConditionStyle {
+	color?: string;
+	effect?: string;
+}
+
 export class ConditionManager {
+	/**
+	 * @param getStyles returns the saved styles per condition key (none when omitted)
+	 * @param saveStyles persists the styles after a change
+	 */
+	constructor(
+		private getStyles: () => Record<string, ConditionStyle> = () => ({}),
+		private saveStyles: () => Promise<void> = async () => {}
+	) {}
+
 	private conditions: ConditionConfig[] = [
 		{ key: 'bleeding', displayName: 'Bleeding', iconName: 'droplet' },
 		{ key: 'dazed', displayName: 'Dazed', iconName: 'waves' },
@@ -53,5 +68,20 @@ export class ConditionManager {
 
 	public getPseudoConditionByKey(key: string): ConditionConfig | undefined {
 		return this.pseudoConditions.find(c => c.key === key);
+	}
+
+	public getStyle(key: string): ConditionStyle | undefined {
+		return this.getStyles()[key];
+	}
+
+	/** Remembers a condition's color/effect; an empty style forgets it. */
+	public async setStyle(key: string, style: ConditionStyle): Promise<void> {
+		const styles = this.getStyles();
+		if (style.color || (style.effect && style.effect !== 'static')) {
+			styles[key] = { color: style.color, effect: style.effect };
+		} else {
+			delete styles[key];
+		}
+		await this.saveStyles();
 	}
 }

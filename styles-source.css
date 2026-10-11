@@ -715,6 +715,19 @@ code.dsa {
 	pointer-events: none;
 }
 
+.instance-name {
+	font-size: 11px;
+	line-height: 1.2;
+	max-width: 100%;
+	margin-bottom: 2px;
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow-wrap: anywhere;
+	color: var(--text-muted);
+}
+
 .instance-conditions {
 	display: flex;
 	flex-wrap: wrap;
@@ -843,6 +856,7 @@ code.dsa {
 .character-stamina {
 	cursor: pointer;
 	font-weight: bold;
+	text-align: center;
 }
 
 /* Add Enemy Group modal */
@@ -1095,6 +1109,10 @@ code.dsa {
 
 .character-stamina .stamina-dying-tag {
 	display: block;
+	width: fit-content;
+	margin: 2px auto 0;
+	padding: 1px 8px;
+	white-space: nowrap;
 	font-size: 0.7em;
 	text-align: center;
 	color: white;
@@ -1104,6 +1122,10 @@ code.dsa {
 
 .character-stamina .stamina-winded-tag {
 	display: block;
+	width: fit-content;
+	margin: 2px auto 0;
+	padding: 1px 8px;
+	white-space: nowrap;
 	font-size: 0.7em;
 	text-align: center;
 	color: black;
