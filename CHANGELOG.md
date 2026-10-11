@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Party: **Add Hero** button opens a window asking for the hero's name, max stamina, max Recoveries and an optional
+  image (with image suggestions from the vault), and adds them to the party note. Hover a hero and click the **×**
+  in its corner to remove them from the party.
+- Hero images can be an image name or link (`image: "[[frodo.png]]"`, also unquoted) as well as a full vault
+  path or URL.
 - Initiative tracker: each creature in the enemy grid shows its name under its image.
 - Initiative tracker: more padding inside the **Winded** and **Dying** tags next to stamina.
 - Initiative tracker: a creature (not a hero) at 0 stamina now shows **DEAD**, like a dead minion.

@@ -83,15 +83,7 @@ export class PartyStore {
      * party note. Only those fields are touched; the rest of the party definition is left as written.
      */
     static async saveHeroes(app: App, file: TFile, heroes: Hero[]): Promise<void> {
-        await app.vault.process(file, (content) => {
-            const match = content.match(PARTY_BLOCK_REGEX);
-            if (!match || match.index == null) {
-                console.warn(`Draw Steel Elements: no ds-party block found in ${file.path}. Change NOT saved.`);
-                return content;
-            }
-
-            const raw = parseYaml(match[2]) ?? {};
-            const rawHeroes: any[] = Array.isArray(raw.heroes) ? raw.heroes : [];
+        await PartyStore.editBlock(app, file, (rawHeroes) => {
             let changed = false;
             heroes.forEach((hero) => {
                 const rawHero = rawHeroes.find((entry) => partyHeroKey(entry) === hero.party_key);
@@ -106,7 +98,48 @@ export class PartyStore {
                 }
                 changed = true;
             });
-            if (!changed) {
+            return changed;
+        });
+    }
+
+    /** Appends a hero entry (as it should appear in the YAML) to the party note. */
+    static async addHero(app: App, file: TFile, rawHero: Partial<Hero>): Promise<void> {
+        await PartyStore.editBlock(app, file, (rawHeroes) => {
+            rawHeroes.push(rawHero);
+            return true;
+        });
+    }
+
+    /** Removes a hero's entry from the party note. */
+    static async removeHero(app: App, file: TFile, hero: Hero): Promise<void> {
+        await PartyStore.editBlock(app, file, (rawHeroes) => {
+            const index = rawHeroes.findIndex((entry) => partyHeroKey(entry) === hero.party_key);
+            if (index < 0) {
+                console.warn(`Draw Steel Elements: hero '${hero.name}' not found in ${file.path}. Change NOT saved.`);
+                return false;
+            }
+            rawHeroes.splice(index, 1);
+            return true;
+        });
+    }
+
+    /**
+     * Rewrites the note's ds-party block after `edit` changes its raw `heroes` list in place.
+     * `edit` returns false to leave the note untouched.
+     */
+    private static async editBlock(app: App, file: TFile, edit: (rawHeroes: any[]) => boolean): Promise<void> {
+        await app.vault.process(file, (content) => {
+            const match = content.match(PARTY_BLOCK_REGEX);
+            if (!match || match.index == null) {
+                console.warn(`Draw Steel Elements: no ds-party block found in ${file.path}. Change NOT saved.`);
+                return content;
+            }
+
+            const raw = parseYaml(match[2]) ?? {};
+            if (!Array.isArray(raw.heroes)) {
+                raw.heroes = [];
+            }
+            if (!edit(raw.heroes)) {
                 return content;
             }
 
