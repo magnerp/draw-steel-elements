@@ -699,6 +699,26 @@ code.dsa {
 	pointer-events: none;
 }
 
+.instance-conditions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 1px;
+	max-width: 100%;
+	margin-bottom: 2px;
+}
+
+.instance-conditions .condition-icon {
+	width: 16px;
+	height: 16px;
+	cursor: inherit;
+}
+
+.instance-conditions .condition-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
 .instance-stamina {
 	font-size: 14px;
 	word-wrap: break-word;
