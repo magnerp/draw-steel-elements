@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Initiative tracker: middle-click a creature in the enemy grid (or a hero's row) to open the Add Conditions window
+  for it, regardless of the current selection.
+- Initiative tracker: Ctrl+right-click a creature to kill it. A minion is marked dead on its own and its stamina is
+  taken out of the squad's pool.
+- Initiative tracker: right-click a creature in the enemy grid to open its stamina window directly (the minion
+  stamina pool window for minions), without selecting it first.
+- Minion stamina pool window: opens with the "Apply … damage" box focused (like the regular stamina window),
+  instead of the pool's current stamina.
+- Stamina windows (regular and minion pool): the "Apply" box's value is selected when the window opens, so you
+  can type a number straight away.
 - Initiative tracker: **Add Enemy Group** button opens a dialog to add a group from statblock notes, with
   monster name suggestions from the vault and a count per creature. `enemy_groups` is now optional.
 - Initiative tracker: creatures whose statblock role contains "minion" automatically make their group a squad

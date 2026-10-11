@@ -1,4 +1,4 @@
-import {App, MarkdownPostProcessorContext, MarkdownRenderChild, setIcon} from "obsidian";
+import {App, MarkdownPostProcessorContext, MarkdownRenderChild, Notice, setIcon} from "obsidian";
 import {RecoveryInfo, StaminaEditModal} from "@views/StaminaEditModal";
 import {ConditionManager} from "@utils/Conditions";
 import {AddConditionsModal} from "@views/ConditionSelectModal";
@@ -228,6 +228,18 @@ export class InitiativeProcessor {
 
         const rowEl = container.createEl("div", {cls: "character-row"});
 
+        // Middle-click to add conditions to this hero
+        rowEl.addEventListener("auxclick", (e) => {
+            if (e.button !== 1) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.openAddConditions(character, () => {
+                container.empty();
+                this.buildCharacterRow(container, character, data, ctx);
+                CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
+            });
+        });
+
         // Character Image
         const imageEl = rowEl.createEl("div", {cls: "character-image"});
         const imgSrcRaw = character.image ?? null;
@@ -426,8 +438,7 @@ export class InitiativeProcessor {
                     CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
                 });
 
-                // Double-click to edit STAMINA
-                cellEl.addEventListener("dblclick", () => {
+                const openStaminaModal = () => {
                     if (group.is_squad && creature.squad_role === "minion") {
                         const modal = new MinionStaminaPoolModal(this.app, group, creature, data, ctx, () => {
                             container.empty();
@@ -438,6 +449,35 @@ export class InitiativeProcessor {
                     } else {
                         this.editCreatureStaminaModal(instance, creature, data, ctx, staminaEl, container).open();
                     }
+                };
+
+                const rebuildGroup = () => {
+                    container.empty();
+                    this.buildEnemyGroupRow(container, group, data, ctx);
+                    CodeBlocks.updateInitiativeTracker(this.app, data, ctx);
+                };
+
+                // Double-click (after selecting) or right-click (directly) to edit STAMINA;
+                // Ctrl+right-click kills this creature
+                cellEl.addEventListener("dblclick", openStaminaModal);
+                cellEl.addEventListener("contextmenu", (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.ctrlKey) {
+                        if (this.killCreatureInstance(group, creature, instance)) {
+                            rebuildGroup();
+                        }
+                    } else {
+                        openStaminaModal();
+                    }
+                });
+
+                // Middle-click to add conditions to this creature (regardless of the selection)
+                cellEl.addEventListener("auxclick", (e) => {
+                    if (e.button !== 1) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openAddConditions(instance, rebuildGroup);
                 });
             });
         });
@@ -643,6 +683,41 @@ export class InitiativeProcessor {
             );
             addConditionsModal.open();
         });
+    }
+
+    /** Opens the Add Conditions modal for a hero or creature; `onAdded` runs after conditions were added. */
+    private openAddConditions(character: Hero | CreatureInstance, onAdded: () => void): void {
+        new AddConditionsModal(this.app, character, this.conditionManager, (newConditions) => {
+            character.conditions = (character.conditions || []).concat(newConditions);
+            onAdded();
+        }).open();
+    }
+
+    /**
+     * Kills one creature instance. Regular creatures and captains drop to 0 stamina; a minion is marked
+     * dead and its stamina is taken out of the squad's pool. Returns false if there was nothing to do.
+     */
+    private killCreatureInstance(group: EnemyGroup, creature: Creature, instance: CreatureInstance): boolean {
+        const label = `${creature.name} #${instance.id}`;
+        if (group.is_squad && creature.squad_role === "minion") {
+            if (instance.isDead) {
+                new Notice(`${label} is already dead.`);
+                return false;
+            }
+            const aliveMinions = creature.instances?.filter((inst) => !inst.isDead).length ?? 0;
+            const pool = group.minion_stamina_pool ?? aliveMinions * creature.max_stamina;
+            instance.isDead = true;
+            group.minion_stamina_pool = Math.max(0, pool - creature.max_stamina);
+        } else {
+            if ((instance.current_stamina ?? creature.max_stamina) <= 0 && !instance.temp_stamina) {
+                new Notice(`${label} is already dead.`);
+                return false;
+            }
+            instance.current_stamina = 0;
+            instance.temp_stamina = 0;
+        }
+        new Notice(`Killed ${label}`);
+        return true;
     }
 
     /** Small, display-only condition icons for a creature instance cell in the grid. */

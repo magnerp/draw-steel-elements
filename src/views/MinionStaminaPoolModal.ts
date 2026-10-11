@@ -246,6 +246,10 @@ export class MinionStaminaPoolModal extends Modal {
 
 		// Initialize checkboxes
 		this.updateCheckboxes();
+
+		// Focus the damage input (like the regular stamina modal) instead of the first input, the pool value,
+		// with the value selected so typing replaces the 0
+		queueMicrotask(() => { damageInput.focus(); damageInput.select(); });
 	}
 
 	// Keep the pool between 0 and its max: damage beyond what's left (or healing past max) is capped,
