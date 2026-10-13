@@ -1,6 +1,7 @@
 import { App, Modal, setIcon } from "obsidian";
 import {StaminaBar} from "@model/StaminaBar";
 import {Stamina} from "@utils/Stamina";
+import {actionForEvent} from "@utils/Hotkeys";
 
 // Tracked recoveries of a hero (only heroes with max_recoveries have them)
 export interface RecoveryInfo {
@@ -312,6 +313,16 @@ export class StaminaEditModal extends Modal {
 
 			this.updateCallback({ recoveriesSpent: this.pendingRecoveriesSpent });
 			this.close();
+		});
+
+		// Apply-field shortcuts (Enter / Shift+Enter by default): apply the number as damage or healing and save
+		applyInput.addEventListener('keydown', (e) => {
+			const action = actionForEvent(e, 'stamina');
+			if (action !== 'applyDamage' && action !== 'applyHealing') return;
+			e.preventDefault();
+			e.stopPropagation();
+			(action === 'applyDamage' ? damageButton : healingButton).click();
+			actionButton.click();
 		});
 
 		// Set focus once we have loaded, with the value selected so typing replaces the 0

@@ -5,6 +5,7 @@ import {applyParty, PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {InitiativeTracker, TrackerServices} from "@drawSteelAdmonition/initiative/InitiativeTracker";
 import {StatblockCache} from "@drawSteelAdmonition/initiative/CreatureView";
 import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
+import {TrackerHotkeys} from "@drawSteelAdmonition/initiative/TrackerHotkeys";
 import DrawSteelAdmonitionPlugin from "main";
 
 export class InitiativeProcessor {
@@ -12,6 +13,7 @@ export class InitiativeProcessor {
     private plugin: DrawSteelAdmonitionPlugin;
     readonly handler = (source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext) => this.postProcess(source, el, ctx);
     private services: TrackerServices;
+    private hotkeys: TrackerHotkeys;
 
     constructor(plugin: DrawSteelAdmonitionPlugin) {
         this.plugin = plugin;
@@ -24,6 +26,7 @@ export class InitiativeProcessor {
             ),
             statblocks: new StatblockCache(plugin),
         };
+        this.hotkeys = new TrackerHotkeys(plugin);
     }
 
     public async postProcess(source: string, el: HTMLElement, ctx: MarkdownPostProcessorContext): Promise<void> {
@@ -38,7 +41,10 @@ export class InitiativeProcessor {
             }
             const tracker = new InitiativeTracker(this.services, container, data, ctx);
             tracker.render();
-            this.watchLinkedNotes(container, tracker, ctx);
+            const child = new MarkdownRenderChild(container);
+            child.register(this.hotkeys.register(tracker));
+            this.watchLinkedNotes(child, tracker, ctx);
+            ctx.addChild(child);
             // Avoid clicks in reading mode from opening edit view
             const stop = (e: Event) => {
                 // Let the resize handles receive their drag
@@ -63,10 +69,9 @@ export class InitiativeProcessor {
      * Re-renders the tracker when a note it reads hero state from changes: the party note, or a hero's
      * ds-hero note (e.g. edited from the hero sheet, another encounter or the party view).
      */
-    private watchLinkedNotes(container: HTMLElement, tracker: InitiativeTracker, ctx: MarkdownPostProcessorContext): void {
+    private watchLinkedNotes(child: MarkdownRenderChild, tracker: InitiativeTracker, ctx: MarkdownPostProcessorContext): void {
         const data = tracker.encounter;
         const partyPath = data.party ? PartyStore.resolveFile(this.app, data.party, ctx.sourcePath).path : null;
-        const child = new MarkdownRenderChild(container);
         child.registerEvent(this.app.vault.on("modify", async (file) => {
             try {
                 if (file.path === partyPath) {
@@ -83,6 +88,5 @@ export class InitiativeProcessor {
                 console.warn("Draw Steel Elements: failed to refresh heroes.", e);
             }
         }));
-        ctx.addChild(child);
     }
 }

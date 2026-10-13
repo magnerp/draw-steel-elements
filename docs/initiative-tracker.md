@@ -332,6 +332,31 @@ The creature view sits to the right of the tracker and shows whoever you select:
 - The selection isn't saved in the code block. It's remembered per note while Obsidian is open, so it stays put
   when the tracker saves and refreshes.
 
+#### Keyboard Shortcuts
+
+Click anywhere on a tracker to send keyboard shortcuts to it; it gets an outline. Clicking anywhere outside it (for
+example back into the note's text) turns them off, so they don't get in the way of typing.
+
+| Default | Action |
+|---|---|
+| `D` | Open the stamina window (damage, healing) of the selected hero or creature |
+| `K` | Kill the selected creature (not heroes), like Ctrl+right-click |
+| `↓` / `↑` | Select the next / previous hero, or the next / previous creature in the selected creature's group (wraps around) |
+| `→` / `←` | Select the next / previous group: the heroes (first hero), then each enemy group (the creature in its details row). Wraps around, and works with nothing selected |
+| `R` | Reset Round |
+
+In the stamina window, type a number in the **Apply** field (it has focus when the window opens) and press `Enter`
+to apply it as damage, or `Shift+Enter` to apply it as healing. Either one saves and closes the window, so `D`,
+a number, and `Enter` damages the selected creature without touching the mouse.
+
+The Stamina Pool modal of a minion squad works the same way (`Enter` deals the number to the given count of minions,
+`Shift+Enter` heals the pool by it). If the damage kills some, but not all, of the remaining minions, focus moves to
+the minion checkboxes instead: pick which ones die (Tab, Space), then press `Enter` to save.
+
+Change them in **Settings → Draw Steel Elements → Initiative Tracker → Keyboard Shortcuts**: click a shortcut and
+press the new key (with Ctrl, Alt, Shift, if you like; Escape cancels). The arrow resets it to its default and the
+**×** turns it off.
+
 #### Layout, Resizing, and Scrolling
 
 - The tracker and the creature view each scroll on their own, so scrolling a long list of enemy groups doesn't
