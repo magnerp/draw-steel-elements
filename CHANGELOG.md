@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Initiative tracker: **Reset Encounter State** now brings every creature back alive at full stamina (re-read from
+  its statblock note) instead of clearing them, and resets heroes written in the block to full stamina and
+  Recoveries.
+- Initiative tracker: new **Save Party State** button. It saves the party heroes' Stamina and Recoveries with the
+  encounter, and **Reset Encounter State** restores them.
 - Initiative tracker: **keyboard shortcuts**, set in the plugin settings. Click a tracker, then press `D` to open
   the selected creature's stamina window, `K` to kill it, `↓`/`↑` to select the next/previous hero or creature in
   the same group, `→`/`←` to jump to the next/previous group (heroes, then each enemy group), and `R` to reset the

@@ -29,6 +29,13 @@ export interface PartyHeroState {
     conditions?: (string | Condition)[];
 }
 
+// A hero's stamina and recoveries, saved with the encounter so a reset can restore them
+export interface HeroSnapshot {
+    current_stamina?: number;
+    temp_stamina?: number;
+    current_recoveries?: number;
+}
+
 export interface CreatureInstance {
     id: number;
     current_stamina?: number;
@@ -70,34 +77,81 @@ export interface Condition {
 export interface EncounterData {
     party?: string; // Link to a note containing a ds-party block
     party_state?: Record<string, PartyHeroState>;
+    // Stamina of the heroes stored outside this block (party note, ds-hero note), saved with "Save Party State"
+    party_snapshot?: Record<string, HeroSnapshot>;
     heroes: Hero[];
     enemy_groups: EnemyGroup[];
     // REVIEW: should we make this into a number since Malice is only {value: number}?
     malice: Malice;
 }
 
-export function resetEncounter(data: EncounterData) {
-    data.heroes.forEach((hero) => {
-        hero.has_taken_turn = undefined;
-        hero.conditions = Array<Condition | string>();
-        // Party heroes keep their stamina and recoveries; those are shared across encounters
-        if (!hero.from_party) {
-            hero.current_stamina = undefined;
-            hero.temp_stamina = undefined;
-            hero.current_recoveries = undefined;
+/** True for heroes whose stamina and recoveries are saved outside the encounter (party note, ds-hero note). */
+export function hasSharedStamina(hero: Hero): boolean {
+    return !!hero.from_party || !!hero.sheet_path;
+}
+
+/** Saves the current stamina and recoveries of the party heroes, for `resetEncounter` to restore. */
+export function snapshotParty(data: EncounterData): void {
+    const snapshot: Record<string, HeroSnapshot> = {};
+    data.heroes.filter(hasSharedStamina).forEach((hero) => {
+        snapshot[hero.name] = {current_stamina: hero.current_stamina, temp_stamina: hero.temp_stamina};
+        if (hero.max_recoveries != null) {
+            snapshot[hero.name].current_recoveries = hero.current_recoveries;
         }
     });
-    data.enemy_groups.forEach((group) => {
+    data.party_snapshot = snapshot;
+}
+
+/**
+ * Puts the encounter back to its starting state: every enemy alive at full stamina (re-read from its
+ * statblock note), no conditions, no turns taken and no Malice. Party heroes and heroes with a ds-hero
+ * note go back to their saved party state (`party_snapshot`) if there is one, otherwise they keep their
+ * stamina and recoveries. Returns those restored heroes, whose notes the caller must save.
+ */
+export async function resetEncounter(data: EncounterData, resolver: ReferenceResolver): Promise<Hero[]> {
+    const restored: Hero[] = [];
+    data.heroes.forEach((hero) => {
+        hero.has_taken_turn = false;
+        hero.conditions = [];
+        if (hasSharedStamina(hero)) {
+            const saved = data.party_snapshot?.[hero.name];
+            if (saved) {
+                hero.current_stamina = saved.current_stamina ?? hero.max_stamina;
+                hero.temp_stamina = saved.temp_stamina ?? 0;
+                if (hero.max_recoveries != null) {
+                    hero.current_recoveries = saved.current_recoveries ?? hero.max_recoveries;
+                }
+                restored.push(hero);
+            }
+        } else {
+            hero.current_stamina = hero.max_stamina;
+            hero.temp_stamina = 0;
+            if (hero.max_recoveries != null) {
+                hero.current_recoveries = hero.max_recoveries;
+            }
+        }
+    });
+    for (const [groupIndex, group] of data.enemy_groups.entries()) {
         group.has_taken_turn = undefined;
         group.selectedInstanceKey = undefined;
-        if (group.is_squad) {
-            group.minion_stamina_pool = undefined;
+        group.minion_stamina_pool = undefined;
+        for (const creature of group.creatures) {
+            creature.instances = undefined;
+            // The statblock note is the source of truth for the creature's stamina
+            if (typeof creature.statblock === "string") {
+                try {
+                    const resolved = await resolver.resolveReferences(creature.statblock);
+                    if (resolved?.stamina) creature.max_stamina = +resolved.stamina;
+                } catch {
+                    // Keep the stamina we have if the note can't be read
+                }
+            }
         }
-        group.creatures.forEach((creatureType) => {
-            creatureType.instances = undefined;
-        });
-    });
+        // Rebuilds the instances (and minion stamina pool) at full stamina
+        await initEnemyGroup(group, groupIndex, resolver);
+    }
     data.malice.value = 0;
+    return restored;
 }
 
 /**
