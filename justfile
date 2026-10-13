@@ -24,4 +24,5 @@ release version:
 	git add .
 	git commit --allow-empty -am "Prepares for release '{{version}}'"
 	git push
-	gh release create "{{version}}" --title "{{version}}" --notes "" main.js manifest.json styles.css
+	# gh defaults to the upstream repo; release on the repo we pushed to
+	gh release create "{{version}}" -R "$(git remote get-url origin)" --title "{{version}}" --notes "" main.js manifest.json styles.css

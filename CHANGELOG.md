@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 6.1.0
+
 - Initiative tracker: **Reset Encounter State** now brings every creature back alive at full stamina (re-read from
   its statblock note) instead of clearing them, and resets heroes written in the block to full stamina and
   Recoveries.
