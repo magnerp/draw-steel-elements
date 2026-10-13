@@ -10,7 +10,8 @@ export interface DSESettings {
 }
 
 export type InitiativeHotkeyAction = "editStamina" | "kill" | "selectNext" | "selectPrevious"
-	| "nextGroup" | "previousGroup" | "resetRound" | "applyDamage" | "applyHealing";
+	| "nextGroup" | "previousGroup" | "resetRound" | "editConditions" | "clearConditions"
+	| "applyDamage" | "applyHealing";
 
 export const DEFAULT_HOTKEYS: Record<InitiativeHotkeyAction, string> = {
 	editStamina: "D",
@@ -20,6 +21,8 @@ export const DEFAULT_HOTKEYS: Record<InitiativeHotkeyAction, string> = {
 	nextGroup: "ArrowRight",
 	previousGroup: "ArrowLeft",
 	resetRound: "R",
+	editConditions: "C",
+	clearConditions: "Shift+C",
 	applyDamage: "Enter",
 	applyHealing: "Shift+Enter",
 };

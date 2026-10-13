@@ -8,9 +8,11 @@ export const HOTKEY_ACTIONS: { action: InitiativeHotkeyAction; scope: HotkeyScop
     {action: "kill", scope: "tracker", name: "Kill", desc: "Kill the selected creature (not heroes)."},
     {action: "selectNext", scope: "tracker", name: "Select next", desc: "Select the next hero, or the next creature in the selected creature's group."},
     {action: "selectPrevious", scope: "tracker", name: "Select previous", desc: "Select the previous hero, or the previous creature in the selected creature's group."},
-    {action: "nextGroup", scope: "tracker", name: "Next group", desc: "Select the next group: the heroes first, then each enemy group (its creature in the detail row)."},
-    {action: "previousGroup", scope: "tracker", name: "Previous group", desc: "Select the previous group: the heroes first, then each enemy group (its creature in the detail row)."},
+    {action: "nextGroup", scope: "tracker", name: "Next group", desc: "Select the next group: the heroes first, then each enemy group (its selected creature)."},
+    {action: "previousGroup", scope: "tracker", name: "Previous group", desc: "Select the previous group: the heroes first, then each enemy group (its selected creature)."},
     {action: "resetRound", scope: "tracker", name: "Reset round", desc: "Mark every hero and enemy group as not having taken their turn."},
+    {action: "editConditions", scope: "tracker", name: "Conditions", desc: "Open the conditions window of the selected hero or creature: pick a condition to add it, or one it has to remove it."},
+    {action: "clearConditions", scope: "tracker", name: "Clear conditions", desc: "Remove every condition from the selected hero or creature."},
     {action: "applyDamage", scope: "stamina", name: "Apply as damage", desc: "In the stamina window's Apply field: deal the number as damage and save."},
     {action: "applyHealing", scope: "stamina", name: "Apply as healing", desc: "In the stamina window's Apply field: heal the number and save."},
 ];

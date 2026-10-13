@@ -1,7 +1,7 @@
 import {App, MarkdownPostProcessorContext, Notice, setIcon} from "obsidian";
 import {RecoveryInfo, StaminaEditModal} from "@views/StaminaEditModal";
 import {ConditionManager} from "@utils/Conditions";
-import {AddConditionsModal} from "@views/ConditionSelectModal";
+import {ConditionsModal} from "@views/ConditionSelectModal";
 import {Images} from "@utils/Images";
 import {CodeBlocks} from "@utils/CodeBlocks";
 import {Stamina} from "@utils/Stamina";
@@ -26,6 +26,7 @@ import {StaminaBar} from "@model/StaminaBar";
 import {PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
 import {CreatureView, StatblockCache, ViewedCreature} from "@drawSteelAdmonition/initiative/CreatureView";
+import {buildStaminaMeter, setStaminaText, staminaState} from "@drawSteelAdmonition/initiative/StaminaMeter";
 import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
 import {HotkeyTarget} from "@drawSteelAdmonition/initiative/TrackerHotkeys";
 import {InitiativeHotkeyAction} from "@model/Settings";
@@ -44,9 +45,54 @@ const trackerScroll = new Map<string, number>();
 // Resolved image sources by raw image reference, so re-renders add images synchronously (no flash)
 const imageSources = new Map<string, string>();
 
+// Whether each image source has transparent corners, so re-renders mark cut-outs synchronously (no flash)
+const cutoutSources = new Map<string, Promise<boolean>>();
+
+/**
+ * Whether an image's corners are transparent, read from a small copy of it. Images the canvas may not read
+ * (another origin without CORS) count as opaque.
+ */
+function hasTransparentCorners(src: string): Promise<boolean> {
+    let result = cutoutSources.get(src);
+    if (!result) {
+        result = readCorners(src, false).catch(() => readCorners(src, true)).catch(() => false);
+        cutoutSources.set(src, result);
+    }
+    return result;
+}
+
+function readCorners(src: string, anonymous: boolean): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        if (anonymous) image.crossOrigin = "anonymous";
+        image.onload = () => {
+            try {
+                const size = 32;
+                const canvas = document.createElement("canvas");
+                canvas.width = size;
+                canvas.height = size;
+                const context = canvas.getContext("2d");
+                if (!context) return resolve(false);
+                context.drawImage(image, 0, 0, size, size);
+                // Throws for a tainted canvas
+                const {data} = context.getImageData(0, 0, size, size);
+                const alpha = (x: number, y: number) => data[(y * size + x) * 4 + 3];
+                const corners = [alpha(1, 1), alpha(size - 2, 1), alpha(1, size - 2), alpha(size - 2, size - 2)];
+                resolve(corners.filter((a) => a < 32).length >= 3);
+            } catch (e) {
+                reject(e);
+            }
+        };
+        image.onerror = () => reject(new Error(`Couldn't load ${src}`));
+        image.src = src;
+    });
+}
+
 const MIN_RATIO = 0.2;
 const MAX_RATIO = 0.8;
 const MIN_HEIGHT = 200;
+// Space left in the note pane around a tracker that fits it (pane padding and the height handle)
+const FIT_MARGIN = 48;
 
 export interface TrackerServices {
     plugin: DrawSteelAdmonitionPlugin;
@@ -65,6 +111,9 @@ export class InitiativeTracker implements HotkeyTarget {
     private trackerEl: HTMLElement;
     private viewEl: HTMLElement;
     private creatureView: CreatureView;
+    private layoutEl: HTMLElement;
+    // Refits the height when the note pane is resized
+    private paneObserver: ResizeObserver | null = null;
 
     constructor(
         services: TrackerServices,
@@ -75,28 +124,53 @@ export class InitiativeTracker implements HotkeyTarget {
         this.plugin = services.plugin;
         this.app = services.plugin.app;
         this.conditionManager = services.conditionManager;
-        this.creatureView = new CreatureView(
-            this.plugin,
-            services.statblocks,
-            ctx,
-            (el, viewed) => this.buildViewSummary(el, viewed),
-            () => this.select(null),
-            (el, viewed) => this.bindViewStamina(el, viewed),
-        );
+        this.creatureView = new CreatureView(this.plugin, services.statblocks, ctx, {
+            buildSummary: (el, viewed) => this.buildViewSummary(el, viewed),
+            bindStamina: (el, viewed) => this.bindViewStamina(el, viewed),
+            onClose: () => this.select(null),
+            onStep: (step) => this.selectSibling(step),
+            siblingCount: (viewed) => viewed.kind === "hero"
+                ? this.data.heroes.length
+                : viewed.group.creatures.reduce((sum, creature) => sum + (creature.instances?.length ?? 0), 0),
+        });
+        this.keepWheelInTracker();
     }
 
-    /** Adds a creature's or hero's image, at once if its source was resolved before. */
+    /**
+     * Scrolling over the tracker scrolls the tracker or creature view, never the note: at either end of a side,
+     * or over the toolbar or handles, the wheel does nothing.
+     */
+    private keepWheelInTracker(): void {
+        this.root.addEventListener("wheel", (e) => {
+            // Leave zooming and sideways scrolling alone
+            if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+            const side = (e.target as HTMLElement).closest<HTMLElement>(".ds-init-tracker, .ds-init-view");
+            const canScroll = side && (e.deltaY > 0
+                ? side.scrollTop + side.clientHeight < side.scrollHeight - 1
+                : side.scrollTop > 0);
+            if (!canScroll) e.preventDefault();
+        }, {passive: false});
+    }
+
+    /**
+     * Adds a creature's or hero's image, at once if its source was resolved before. An image with transparent
+     * corners (a round token, a cut-out) marks its container `is-cutout`, so it isn't framed in a square.
+     */
     private addImage(container: HTMLElement, imageRaw: string | null | undefined, alt: string): void {
         const defaultPath = this.plugin.settings.defaultImagePath;
         const cacheKey = `${imageRaw ?? ""}\n${defaultPath}`;
+        const show = (src: string) => {
+            container.createEl("img", {attr: {src, alt}});
+            hasTransparentCorners(src).then((cutout) => container.toggleClass("is-cutout", cutout));
+        };
         const known = imageSources.get(cacheKey);
         if (known) {
-            container.createEl("img", {attr: {src: known, alt}});
+            show(known);
             return;
         }
         Images.resolveImageSourceOrDefault(this.app, imageRaw ?? null, defaultPath).then((imgSrc) => {
             imageSources.set(cacheKey, imgSrc);
-            container.createEl("img", {attr: {src: imgSrc, alt}});
+            show(imgSrc);
         });
     }
 
@@ -110,7 +184,9 @@ export class InitiativeTracker implements HotkeyTarget {
 
     public render(): void {
         this.root.empty();
+        this.root.addClass("ds-it");
         const layout = this.root.createEl("div", {cls: "ds-init-layout"});
+        this.layoutEl = layout;
         this.trackerEl = layout.createEl("div", {cls: "ds-init-tracker"});
         const splitter = layout.createEl("div", {
             cls: "ds-init-resizer ds-init-splitter",
@@ -119,7 +195,7 @@ export class InitiativeTracker implements HotkeyTarget {
         this.viewEl = layout.createEl("div", {cls: "ds-init-view"});
         const heightHandle = this.root.createEl("div", {
             cls: "ds-init-resizer ds-init-height-handle",
-            attr: {title: "Drag to change the height"},
+            attr: {title: "Drag to change the height. Double-click to fit the note pane again"},
         });
         this.applyLayout(layout);
         this.makeResizable(layout, splitter, heightHandle);
@@ -129,18 +205,20 @@ export class InitiativeTracker implements HotkeyTarget {
 
         this.buildTracker(this.trackerEl);
         this.renderView();
-        this.restoreScroll();
+        this.whenAttached();
     }
 
     /**
-     * Restores the tracker's and view's scroll positions. When Obsidian re-renders the block (after every save,
-     * e.g. selecting a creature) it isn't in the page yet, and a detached element ignores scrollTop. A mutation
-     * observer restores it as soon as the block is attached, before the page is painted (no jump).
+     * Fits the height to the note pane and restores the tracker's and view's scroll positions. When Obsidian
+     * re-renders the block (after every save, e.g. selecting a creature) it isn't in the page yet: there's no pane
+     * to measure, and a detached element ignores scrollTop. A mutation observer does both as soon as the block is
+     * attached, before the page is painted (no jump).
      */
-    private restoreScroll(): void {
+    private whenAttached(): void {
         const trackerEl = this.trackerEl;
         const viewEl = this.viewEl;
         const restore = () => {
+            this.fitHeight();
             trackerEl.scrollTop = trackerScroll.get(this.ctx.sourcePath) ?? 0;
             viewEl.scrollTop = viewScroll.get(this.ctx.sourcePath) ?? 0;
         };
@@ -163,6 +241,32 @@ export class InitiativeTracker implements HotkeyTarget {
     // ---------------------------------------------------------------------------------------------
     // Resizing
     // ---------------------------------------------------------------------------------------------
+
+    /** The note pane the tracker scrolls in: reading view or live preview. */
+    private notePane(): HTMLElement | null {
+        return this.root.closest<HTMLElement>(".markdown-preview-view, .cm-scroller");
+    }
+
+    /**
+     * Without a dragged height, the tracker fills the note pane (less a margin), refitting when the pane is
+     * resized.
+     */
+    private fitHeight(): void {
+        const pane = this.notePane();
+        if (!pane || this.plugin.settings.initiativeLayout?.height) return;
+        this.layoutEl.style.setProperty("--ds-init-height", `${Math.max(MIN_HEIGHT, pane.clientHeight - FIT_MARGIN)}px`);
+        if (!this.paneObserver) {
+            this.paneObserver = new ResizeObserver(() => {
+                // This tracker was replaced by a newer render of the block
+                if (!this.root.isConnected) {
+                    this.paneObserver?.disconnect();
+                    return;
+                }
+                this.fitHeight();
+            });
+            this.paneObserver.observe(pane);
+        }
+    }
 
     /** Applies the saved width split and height (shared by all trackers). */
     private applyLayout(layout: HTMLElement): void {
@@ -189,6 +293,13 @@ export class InitiativeTracker implements HotkeyTarget {
             settings.initiativeLayout = {...settings.initiativeLayout, height};
             this.applyLayout(layout);
         });
+        // Back to fitting the note pane
+        heightHandle.addEventListener("dblclick", () => {
+            const {height, ...rest} = settings.initiativeLayout ?? {};
+            settings.initiativeLayout = rest;
+            this.plugin.saveSettings();
+            this.fitHeight();
+        });
     }
 
     /** Calls `onMove` while `handle` is dragged and saves the settings once it's released. */
@@ -213,6 +324,12 @@ export class InitiativeTracker implements HotkeyTarget {
 
     private save(): Promise<void> {
         return CodeBlocks.updateInitiativeTracker(this.app, this.data, this.ctx);
+    }
+
+    /** Re-renders the tracker and creature view with the changed encounter, then saves it. */
+    private refresh(): Promise<void> {
+        this.render();
+        return this.save();
     }
 
     /** Saves a hero's stamina/recoveries: to the party note for party heroes, otherwise to this code block. */
@@ -278,6 +395,17 @@ export class InitiativeTracker implements HotkeyTarget {
         this.select({kind: "creature", groupIndex: this.data.enemy_groups.indexOf(group), instanceKey});
     }
 
+    /**
+     * Shows a creature in its group's focus row and in the creature view. The focus row is saved with the
+     * group, so the whole tracker re-renders and the block is saved.
+     */
+    private focusCreature(group: EnemyGroup, instanceKey: string): void {
+        group.selectedInstanceKey = instanceKey;
+        selections.set(this.ctx.sourcePath, {kind: "creature", groupIndex: this.data.enemy_groups.indexOf(group), instanceKey});
+        viewScroll.delete(this.ctx.sourcePath);
+        this.refresh();
+    }
+
     /** The current selection resolved against the encounter, or null if it no longer exists. */
     private viewed(): ViewedCreature | null {
         const selection = selections.get(this.ctx.sourcePath);
@@ -308,59 +436,61 @@ export class InitiativeTracker implements HotkeyTarget {
         el.toggleClass("is-viewed", key === this.selectionKey(selections.get(this.ctx.sourcePath)));
     }
 
-    /** Image, name, stamina and conditions at the top of the creature view (display only). */
+    /** Portrait, name, conditions, stamina and recoveries at the top of the creature view. */
     private buildViewSummary(container: HTMLElement, viewed: ViewedCreature): void {
+        const character = viewed.kind === "hero" ? viewed.hero : viewed.instance;
         const name = viewed.kind === "hero" ? viewed.hero.name : `${viewed.creature.name} #${viewed.instance.id}`;
         const image = viewed.kind === "hero" ? viewed.hero.image : viewed.creature.image;
+        const stamina = viewed.kind === "hero"
+            ? staminaState(viewed.hero)
+            : staminaState(viewed.instance, viewed.creature, viewed.group);
+        container.toggleClass("is-dead", stamina.status === "dead");
 
-        const imageEl = container.createEl("div", {cls: "character-image"});
-        this.addImage(imageEl, image ?? null, name);
+        const identityEl = container.createEl("div", {cls: "ds-cv-identity"});
+        this.addImage(identityEl.createEl("div", {cls: "ds-cv-portrait"}), image ?? null, name);
 
-        const infoEl = container.createEl("div", {cls: "character-info"});
-        infoEl.createEl("div", {cls: "character-name", text: name});
-        if (viewed.kind === "creature" && viewed.group.name !== viewed.creature.name) {
-            infoEl.createEl("div", {cls: "ds-init-view-group", text: viewed.group.name});
-        }
-        const conditionsEl = infoEl.createEl("div", {cls: "character-conditions"});
-        const conditions = viewed.kind === "hero" ? viewed.hero.conditions : viewed.instance.conditions;
-        (conditions || []).forEach((entry) => this.renderConditionIcon(conditionsEl, entry));
-
-        const healthEl = container.createEl("div", {cls: "character-health"});
-        const staminaEl = healthEl.createEl("div", {cls: "character-stamina ds-init-view-stamina"});
+        const textEl = identityEl.createEl("div", {cls: "ds-cv-text"});
+        const kickerEl = textEl.createEl("div", {cls: "ds-cv-kicker"});
         if (viewed.kind === "hero") {
-            this.updateStaminaDisplay(staminaEl, viewed.hero);
-            const recoveries = this.recoveryInfo(viewed.hero);
-            if (recoveries) {
-                healthEl.createEl("div", {
-                    cls: "ds-init-view-recoveries",
-                    text: `Recoveries ${recoveries.current}/${recoveries.max}`,
-                });
-            }
+            kickerEl.createSpan({text: "Hero"});
         } else {
-            this.updateStaminaDisplay(staminaEl, viewed.instance, viewed.creature, viewed.group);
+            kickerEl.createSpan({text: viewed.group.name});
+            const role = this.roleLabel(viewed.creature);
+            if (role) kickerEl.createSpan({cls: "ds-it-tag", text: role});
         }
-        staminaEl.title = "Edit Stamina";
-        staminaEl.addEventListener("click", () => this.openViewStaminaModal(viewed));
+        textEl.createEl("div", {cls: "ds-cv-name", text: name});
+        this.buildConditions(textEl.createEl("div", {cls: "ds-it-conditions ds-cv-conditions"}), character, name, true);
+
+        const vitalsEl = container.createEl("div", {cls: "ds-cv-vitals"});
+        const meterEl = buildStaminaMeter(vitalsEl, stamina, true);
+        meterEl.addClass("is-clickable");
+        meterEl.setAttr("aria-label", "Edit Stamina");
+        meterEl.addEventListener("click", () => this.openStaminaModal(viewed));
+        if (viewed.kind === "hero") {
+            const hero = viewed.hero;
+            buildRecoveryControl(vitalsEl, hero, () => {
+                this.render();
+                this.saveHeroStamina(hero);
+            });
+        }
     }
 
     /** Shows the viewed hero's or creature's stamina in `el` (the statblock's Stamina stat); clicking edits it. */
     private bindViewStamina(el: HTMLElement, viewed: ViewedCreature): void {
-        if (viewed.kind === "hero") {
-            this.updateStaminaDisplay(el, viewed.hero);
-        } else {
-            this.updateStaminaDisplay(el, viewed.instance, viewed.creature, viewed.group);
-        }
+        setStaminaText(el, viewed.kind === "hero"
+            ? staminaState(viewed.hero)
+            : staminaState(viewed.instance, viewed.creature, viewed.group));
         const title = el.title;
         el.parentElement?.setAttr("title", title ? `${title}. Click to edit Stamina` : "Edit Stamina");
         el.title = "";
-        el.addEventListener("click", () => this.openViewStaminaModal(viewed));
+        el.addEventListener("click", () => this.openStaminaModal(viewed));
     }
 
     /**
-     * The same stamina window as clicking the stamina in the tracker. The whole tracker re-renders afterwards so
-     * the tracker row, grid cell and creature view all show the new stamina.
+     * The stamina window of a hero or creature: a squad's pool for its minions. The whole tracker re-renders
+     * afterwards so the tracker and creature view both show the new stamina.
      */
-    private openViewStaminaModal(viewed: ViewedCreature): void {
+    private openStaminaModal(viewed: ViewedCreature): void {
         if (viewed.kind === "hero") {
             const hero = viewed.hero;
             const staminaBar = StaminaBar.fromHero(hero);
@@ -377,19 +507,19 @@ export class InitiativeTracker implements HotkeyTarget {
 
         const {group, creature, instance} = viewed;
         if (group.is_squad && creature.squad_role === "minion") {
-            // Minions in a squad share the pool's stamina
-            new MinionStaminaPoolModal(this.app, group, creature, this.data, this.ctx, () => {
-                this.render();
-                this.save();
-            }).open();
+            this.openPoolModal(group, creature);
             return;
         }
         const staminaBar = StaminaBar.fromCreature(instance, creature);
         new StaminaEditModal(this.app, staminaBar, false, creature.name, () => {
             staminaBar.updateCreature(instance);
-            this.render();
-            this.save();
+            this.refresh();
         }, creature.squad_role !== "minion").open();
+    }
+
+    /** Minions in a squad share the pool's stamina. */
+    private openPoolModal(group: EnemyGroup, minion: Creature): void {
+        new MinionStaminaPoolModal(this.app, group, minion, this.data, this.ctx, () => this.refresh()).open();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -409,12 +539,11 @@ export class InitiativeTracker implements HotkeyTarget {
                 if (!viewed) {
                     new Notice("Select a hero or creature first.");
                 } else if (action === "editStamina") {
-                    this.openViewStaminaModal(viewed);
+                    this.openStaminaModal(viewed);
                 } else if (viewed.kind === "hero") {
                     new Notice("Only creatures can be killed with the shortcut.");
                 } else if (this.killCreatureInstance(viewed.group, viewed.creature, viewed.instance)) {
-                    this.render();
-                    this.save();
+                    this.refresh();
                 }
                 break;
             }
@@ -433,6 +562,26 @@ export class InitiativeTracker implements HotkeyTarget {
             case "resetRound":
                 this.resetRound();
                 break;
+            case "editConditions":
+            case "clearConditions": {
+                const viewed = this.viewed();
+                if (!viewed) {
+                    new Notice("Select a hero or creature first.");
+                    break;
+                }
+                const character = viewed.kind === "hero" ? viewed.hero : viewed.instance;
+                const name = viewed.kind === "hero" ? viewed.hero.name : `${viewed.creature.name} #${viewed.instance.id}`;
+                if (action === "editConditions") {
+                    this.openConditions(character, name);
+                } else if (!character.conditions?.length) {
+                    new Notice(`${name} has no conditions.`);
+                } else {
+                    character.conditions = [];
+                    new Notice(`Cleared the conditions of ${name}.`);
+                    this.refresh();
+                }
+                break;
+            }
         }
     }
 
@@ -456,20 +605,15 @@ export class InitiativeTracker implements HotkeyTarget {
                 (creature.instances ?? []).map((instance) => `${creatureIndex}-${instance.id}`)
             );
             const index = keys.indexOf(selection.instanceKey);
-            const instanceKey = keys[(index + step + keys.length) % keys.length];
-            // The group's detail row follows the selection, as when clicking a cell
-            group.selectedInstanceKey = instanceKey;
-            selections.set(this.ctx.sourcePath, {kind: "creature", groupIndex: selection.groupIndex, instanceKey});
-            viewScroll.delete(this.ctx.sourcePath);
-            this.render();
-            this.save();
+            // The group's focus row follows the selection, as when clicking a token
+            this.focusCreature(group, keys[(index + step + keys.length) % keys.length]);
         }
         this.scrollToSelection();
     }
 
     /**
      * Moves the selection to the next (`step` 1) or previous (-1) group, wrapping around: the heroes come first,
-     * then each enemy group. An enemy group selects the creature in its detail row, as clicking the group does;
+     * then each enemy group. An enemy group selects the creature in its focus row, as clicking the group does;
      * the heroes select the first hero.
      */
     private selectGroup(step: number): void {
@@ -498,7 +642,7 @@ export class InitiativeTracker implements HotkeyTarget {
         this.scrollToSelection();
     }
 
-    /** Scrolls the tracker so the selected row or cell is visible, and remembers it for the next render. */
+    /** Scrolls the tracker so the selected row or token is visible, and remembers it for the next render. */
     private scrollToSelection(): void {
         const selected = this.trackerEl.querySelector(".creature-instance-cell.is-viewed")
             ?? this.trackerEl.querySelector(".is-viewed");
@@ -513,8 +657,7 @@ export class InitiativeTracker implements HotkeyTarget {
         this.data.enemy_groups.forEach((group) => {
             group.has_taken_turn = false;
         });
-        this.render();
-        this.save();
+        this.refresh();
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -522,183 +665,208 @@ export class InitiativeTracker implements HotkeyTarget {
     // ---------------------------------------------------------------------------------------------
 
     private buildTracker(container: HTMLElement): void {
+        this.buildToolbar(container);
+        this.buildHeroes(container);
+        this.buildEnemies(container);
+    }
+
+    /** A toolbar button: an icon, with its label shown when `showLabel` (otherwise a tooltip). */
+    private button(container: HTMLElement, icon: string, label: string, onClick: () => void, showLabel = false): HTMLElement {
+        const buttonEl = container.createEl("button", {cls: "ds-it-button", attr: {"aria-label": label}});
+        setIcon(buttonEl.createSpan({cls: "ds-it-button-icon"}), icon);
+        if (showLabel) buttonEl.createSpan({cls: "ds-it-button-label", text: label});
+        buttonEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            onClick();
+        });
+        return buttonEl;
+    }
+
+    /** Round progress and New Round, Malice, and the encounter actions. */
+    private buildToolbar(container: HTMLElement): void {
         const data = this.data;
-        const topActionBar = container.createEl("div", {cls: "top-action-bar"});
+        const toolbar = container.createEl("div", {cls: "ds-it-toolbar"});
 
-        // Reset Round Button
-        const resetRoundButton = topActionBar.createEl("button", {
-            text: "Reset Round",
-            cls: "reset-round-button",
+        // Round: who has acted, and starting the next round
+        const roundEl = toolbar.createEl("div", {cls: "ds-it-round"});
+        const turns = [...data.heroes, ...data.enemy_groups];
+        const acted = turns.filter((turn) => turn.has_taken_turn).length;
+        this.button(roundEl, "rotate-ccw", "New round", () => this.resetRound(), true)
+            .setAttr("aria-label", "New round: clear every turn taken");
+        const progressEl = roundEl.createEl("div", {
+            cls: "ds-it-round-progress",
+            attr: {title: `${acted} of ${turns.length} have taken their turn this round`},
         });
-        resetRoundButton.addEventListener("click", () => this.resetRound());
+        progressEl.createSpan({cls: "ds-it-round-count", text: `${acted}/${turns.length}`});
+        progressEl.createSpan({cls: "ds-it-round-label", text: "acted"});
+        const barEl = progressEl.createEl("div", {cls: "ds-it-round-bar"});
+        barEl.createEl("div").style.width = turns.length ? `${acted / turns.length * 100}%` : "0";
+        progressEl.toggleClass("is-complete", turns.length > 0 && acted === turns.length);
 
-        // Reset Encounter Button
-        const resetEncounterButton = topActionBar.createEl("button", {
-            text: "Reset Encounter State",
-            cls: "reset-encounter-button",
-        });
-        resetEncounterButton.addEventListener("click", () => {
-            new ResetEncounterModal(this.app, !!data.party_snapshot, async () => {
-                const restored = await resetEncounter(data, new ReferenceResolver(this.app, this.plugin.settings));
-                this.render();
-                await this.save();
-                await this.saveSharedHeroes(restored);
-            }).open();
-        });
+        // Malice
+        const maliceEl = toolbar.createEl("div", {cls: "ds-it-malice"});
+        const valueEl = maliceEl.createEl("div", {cls: "ds-it-malice-value", attr: {title: "Malice"}});
+        setIcon(valueEl.createSpan({cls: "ds-it-malice-icon"}), "flame");
+        const numberEl = valueEl.createSpan({cls: "ds-it-malice-number", text: `${data.malice.value}`});
+        valueEl.createSpan({cls: "ds-it-malice-label", text: "Malice"});
+        const changeMalice = (delta: number) => {
+            data.malice.value += delta;
+            numberEl.setText(`${data.malice.value}`);
+            this.save();
+        };
+        maliceEl.prepend(this.button(maliceEl, "minus", "Spend Malice", () => changeMalice(-1)));
+        this.button(maliceEl, "plus", "Gain Malice", () => changeMalice(1));
 
-        // Save Party State Button: what "Reset Encounter State" brings the party back to
-        if (data.heroes.some(hasSharedStamina)) {
-            const snapshotButton = topActionBar.createEl("button", {
-                text: "Save Party State",
-                cls: "save-party-state-button",
-                attr: {title: "Save the party's current Stamina and Recoveries; resetting the encounter restores them"},
-            });
-            snapshotButton.addEventListener("click", async () => {
-                snapshotParty(data);
-                await this.save();
-                new Notice("Party state saved. Resetting the encounter will restore it.");
-            });
-        }
-
-        // Add Enemy Group Button
-        const addGroupButton = topActionBar.createEl("button", {
-            text: "Add Enemy Group",
-            cls: "add-enemy-group-button",
-        });
-        addGroupButton.addEventListener("click", () => {
+        // Encounter actions
+        const actionsEl = toolbar.createEl("div", {cls: "ds-it-actions"});
+        this.button(actionsEl, "plus", "Add enemy group", () => {
             new AddEnemyGroupModal(this.app, this.plugin.settings, async (group) => {
                 // Same setup as groups written in the YAML (statblocks, minion squads, instances)
                 const resolver = new ReferenceResolver(this.app, this.plugin.settings);
                 await initEnemyGroup(group, data.enemy_groups.length, resolver);
                 data.enemy_groups.push(group);
-                this.render();
-                await this.save();
+                await this.refresh();
             }).open();
         });
-
-        // Heroes UI
-        const heroesContainer = container.createEl("div", {cls: "heroes-container"});
-        const heroesHeader = heroesContainer.createEl("div", {cls: "heroes-header"});
-        heroesHeader.createEl("h3", {text: "Heroes"});
-        if (data.party) {
-            heroesHeader.createEl("span", {
-                cls: "party-link-tag",
-                text: `Party: ${data.party.replace(/^\[\[|\]\]$/g, "")}`,
-                attr: {title: "Stamina and Recoveries of party heroes are shared with every encounter using this party"},
+        // What "Reset encounter" brings the party back to
+        if (data.heroes.some(hasSharedStamina)) {
+            this.button(actionsEl, "save", "Save party state: resetting the encounter restores the party's current Stamina and Recoveries", async () => {
+                snapshotParty(data);
+                await this.save();
+                new Notice("Party state saved. Resetting the encounter will restore it.");
             });
         }
-
-        data.heroes.forEach((hero) => {
-            const heroContEl = heroesContainer.createEl("div", {cls: "hero-container"});
-            this.buildCharacterRow(heroContEl, hero);
-        });
-
-        // Enemies UI
-        const enemiesContainer = container.createEl("div", {cls: "enemies-container"});
-        const enemyHeader = enemiesContainer.createEl("div", {cls: "enemies-header"});
-        enemyHeader.createEl("h3", {text: "Enemy Groups"});
-
-        // Villain Power
-        const maliceContainer = enemyHeader.createEl("div", {cls: "malice-container"});
-        const maliceModifiers = maliceContainer.createEl("div", {cls: "malice-modifiers"});
-        let maliceUp = maliceModifiers.createEl("div", {cls: "malice-modifier"});
-        let maliceDown = maliceModifiers.createEl("div", {cls: "malice-modifier"});
-        maliceContainer.createEl("div", {cls: "malice-text", text: "Malice: " + data.malice.value});
-
-        setIcon(maliceUp, "chevron-up");
-        setIcon(maliceDown, "chevron-down");
-
-        maliceUp.addEventListener("click", () => {
-            data.malice.value += 1;
-            maliceContainer.setText("Malice: " + data.malice.value);
-            this.save();
-        });
-        maliceDown.addEventListener("click", () => {
-            data.malice.value -= 1;
-            maliceContainer.setText("Malice: " + data.malice.value);
-            this.save();
-        });
-
-        data.enemy_groups.forEach((group) => {
-            const groupContEl = enemiesContainer.createEl("div", {cls: "enemy-group-container"});
-            this.buildEnemyGroupRow(groupContEl, group);
+        this.button(actionsEl, "history", "Reset encounter", () => {
+            new ResetEncounterModal(this.app, !!data.party_snapshot, async () => {
+                const restored = await resetEncounter(data, new ReferenceResolver(this.app, this.plugin.settings));
+                await this.refresh();
+                await this.saveSharedHeroes(restored);
+            }).open();
         });
     }
 
-    private buildCharacterRow(container: HTMLElement, character: Hero): void {
-        // Left icons
-        const icon = container.createEl("div", {cls: "character-icon"});
+    private buildSectionHeader(section: HTMLElement, icon: string, title: string): HTMLElement {
+        const headerEl = section.createEl("div", {cls: "ds-it-section-header"});
+        setIcon(headerEl.createSpan({cls: "ds-it-section-icon"}), icon);
+        headerEl.createEl("h3", {text: title});
+        return headerEl;
+    }
 
-        // Turn Indicator
-        const turnIndicatorEl = icon.createEl("div", {cls: "turn-indicator"});
-        turnIndicatorEl.title = "Toggle to mark turn taken";
-        this.updateTurnIndicator(turnIndicatorEl, character.has_taken_turn ?? false);
+    /** How many of these have yet to act this round. */
+    private toActText(turns: { has_taken_turn?: boolean }[]): string {
+        const waiting = turns.filter((turn) => !turn.has_taken_turn).length;
+        return waiting === 0 ? "all acted" : `${waiting} to act`;
+    }
 
-        // Add click handler to toggle has_taken_turn
-        turnIndicatorEl.addEventListener("click", () => {
-            character.has_taken_turn = !(character.has_taken_turn ?? false);
-            this.updateTurnIndicator(turnIndicatorEl, character.has_taken_turn);
-            this.save();
+    private buildHeroes(container: HTMLElement): void {
+        const data = this.data;
+        const section = container.createEl("div", {cls: "ds-it-section is-heroes"});
+        const headerEl = this.buildSectionHeader(section, "shield", "Heroes");
+        if (data.heroes.length > 0) {
+            headerEl.createSpan({cls: "ds-it-section-count", text: this.toActText(data.heroes)});
+        }
+        if (data.party) {
+            const partyEl = headerEl.createSpan({
+                cls: "ds-it-party",
+                attr: {title: "Stamina and Recoveries of party heroes are shared with every encounter using this party"},
+            });
+            setIcon(partyEl.createSpan(), "link");
+            partyEl.createSpan({text: data.party.replace(/^\[\[|\]\]$/g, "")});
+        }
+
+        if (data.heroes.length === 0) {
+            section.createEl("div", {cls: "ds-it-empty", text: "No heroes in this encounter."});
+        }
+        data.heroes.forEach((hero) => this.buildHeroCard(section, hero));
+    }
+
+    private buildEnemies(container: HTMLElement): void {
+        const data = this.data;
+        const section = container.createEl("div", {cls: "ds-it-section is-enemies"});
+        const headerEl = this.buildSectionHeader(section, "swords", "Enemies");
+        if (data.enemy_groups.length > 0) {
+            headerEl.createSpan({cls: "ds-it-section-count", text: this.toActText(data.enemy_groups)});
+        }
+
+        if (data.enemy_groups.length === 0) {
+            section.createEl("div", {cls: "ds-it-empty", text: "No enemy groups. Add one from the toolbar."});
+        }
+        data.enemy_groups.forEach((group) => this.buildGroupCard(section, group));
+    }
+
+    /** The strip on the left of a card that marks the hero's or group's turn as taken. */
+    private buildTurnToggle(card: HTMLElement, turn: Hero | EnemyGroup): void {
+        const acted = turn.has_taken_turn ?? false;
+        card.toggleClass("has-acted", acted);
+        const toggleEl = card.createEl("button", {
+            cls: "ds-it-turn",
+            attr: {"aria-label": acted ? "Turn taken (click to undo)" : "Mark turn taken"},
         });
+        setIcon(toggleEl, acted ? "check" : "circle");
+        toggleEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            turn.has_taken_turn = !acted;
+            this.refresh();
+        });
+    }
 
-        const rowEl = container.createEl("div", {cls: "character-row"});
+    private buildPortrait(container: HTMLElement, image: string | null | undefined, name: string): HTMLElement {
+        const portraitEl = container.createEl("div", {cls: "ds-it-portrait"});
+        this.addImage(portraitEl, image, name);
+        return portraitEl;
+    }
 
-        // Click to show this hero in the creature view
-        this.setViewKey(rowEl, this.heroSelectionKey(character));
-        rowEl.addEventListener("click", () => this.selectHero(character));
+    /**
+     * Double-clicking a card or row opens the stamina window, except on its own controls (turn, stamina,
+     * conditions, recoveries), which handle their clicks themselves.
+     */
+    private onDoubleClick(el: HTMLElement, viewed: ViewedCreature): void {
+        el.addEventListener("dblclick", (e) => {
+            if ((e.target as HTMLElement).closest("button, .ds-it-stamina, .ds-it-condition, .hero-recoveries")) return;
+            this.openStaminaModal(viewed);
+        });
+    }
 
-        // Middle-click to add conditions to this hero
-        rowEl.addEventListener("auxclick", (e) => {
+    /** Middle-click opens the conditions window of the hero or creature. */
+    private onMiddleClick(el: HTMLElement, character: Hero | CreatureInstance, name: string): void {
+        el.addEventListener("auxclick", (e) => {
             if (e.button !== 1) return;
             e.preventDefault();
             e.stopPropagation();
-            this.openAddConditions(character, () => {
-                container.empty();
-                this.buildCharacterRow(container, character);
-                this.save();
-            });
+            this.openConditions(character, name);
         });
+    }
 
-        // Character Image
-        const imageEl = rowEl.createEl("div", {cls: "character-image"});
-        const imgSrcRaw = character.image ?? null;
+    private buildHeroCard(container: HTMLElement, hero: Hero): void {
+        const card = container.createEl("div", {cls: "ds-it-card ds-it-hero"});
+        this.buildTurnToggle(card, hero);
 
-        this.addImage(imageEl, imgSrcRaw, character.name);
+        const rowEl = card.createEl("div", {cls: "ds-it-row"});
+        // Click to show this hero in the creature view
+        this.setViewKey(card, this.heroSelectionKey(hero));
+        rowEl.addEventListener("click", () => this.selectHero(hero));
+        this.onDoubleClick(rowEl, {kind: "hero", hero});
+        this.onMiddleClick(rowEl, hero, hero.name);
 
-        // Middle: Character Info
-        const infoEl = rowEl.createEl("div", {cls: "character-info"});
+        const stamina = staminaState(hero);
+        card.addClass(`is-${stamina.status}`);
+        this.buildPortrait(rowEl, hero.image, hero.name);
 
-        // Top: Character Name
-        infoEl.createEl("div", {cls: "character-name", text: character.name});
+        const mainEl = rowEl.createEl("div", {cls: "ds-it-main"});
+        mainEl.createEl("div", {cls: "ds-it-name", text: hero.name});
+        this.buildConditions(mainEl.createEl("div", {cls: "ds-it-conditions"}), hero, hero.name);
 
-        // Bottom: Conditions
-        const conditionsEl = infoEl.createEl("div", {cls: "character-conditions"});
-        this.buildConditionIcons(conditionsEl, character);
-
-        // Right: Health Info and Turn Indicator Container
-        const rightContainer = rowEl.createEl("div", {cls: "character-right"});
-
-        // Health Info
-        const healthEl = rightContainer.createEl("div", {cls: "character-health"});
-        const staminaEl = healthEl.createEl("div", {cls: "character-stamina"});
-        this.updateStaminaDisplay(staminaEl, character);
-
-        staminaEl.addEventListener("click", () => {
-            let staminaBar = StaminaBar.fromHero(character);
-            const modal = new StaminaEditModal(this.app, staminaBar, true, character.name, (result) => {
-                staminaBar.updateHero(character);
-                if (character.max_recoveries != null) {
-                    character.current_recoveries = (character.current_recoveries ?? character.max_recoveries) - result.recoveriesSpent;
-                }
-                // Recoveries display is rebuilt along with the row
-                container.empty();
-                this.buildCharacterRow(container, character);
-                this.saveHeroStamina(character);
-            }, true, this.recoveryInfo(character));
-            modal.open();
+        const vitalsEl = rowEl.createEl("div", {cls: "ds-it-vitals"});
+        const meterEl = buildStaminaMeter(vitalsEl, stamina);
+        meterEl.addClass("is-clickable");
+        meterEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.openStaminaModal({kind: "hero", hero});
         });
-
-        buildRecoveryControl(healthEl, character, () => this.saveHeroStamina(character));
+        buildRecoveryControl(vitalsEl, hero, () => {
+            this.render();
+            this.saveHeroStamina(hero);
+        });
     }
 
     private recoveryInfo(hero: Hero): RecoveryInfo | undefined {
@@ -724,7 +892,7 @@ export class InitiativeTracker implements HotkeyTarget {
         return null;
     }
 
-    /** The instance shown in a group's detail row: the last selected one, else the first. */
+    /** The instance shown in a group's focus row: the last selected one, else the first. */
     private shownInstance(group: EnemyGroup): { creature: Creature; instance: CreatureInstance } | null {
         const selected = group.selectedInstanceKey != null ? this.findInstance(group, group.selectedInstanceKey) : null;
         if (selected) return selected;
@@ -736,372 +904,233 @@ export class InitiativeTracker implements HotkeyTarget {
         return null;
     }
 
-    private buildEnemyGroupRow(container: HTMLElement, group: EnemyGroup): void {
-        const data = this.data;
+    private roleLabel(creature: Creature): string | null {
+        if (creature.squad_role === "minion") return "Minion";
+        if (creature.squad_role === "captain") return "Captain";
+        return null;
+    }
 
-        // Left icons
-        const icon = container.createEl("div", {cls: "enemy-group-icon"});
+    private buildGroupCard(container: HTMLElement, group: EnemyGroup): void {
+        const card = container.createEl("div", {cls: "ds-it-card ds-it-group"});
+        this.buildTurnToggle(card, group);
+        const single = group.creatures.length === 1 && group.creatures[0].amount === 1;
+        card.toggleClass("is-single", single);
 
-        // Turn Indicator
-        const turnIndicatorEl = icon.createEl("div", {cls: "turn-indicator"});
-        turnIndicatorEl.title = "Toggle to mark turn taken";
-        this.updateTurnIndicator(turnIndicatorEl, group.has_taken_turn ?? false);
-
-        turnIndicatorEl.addEventListener("click", () => {
-            group.has_taken_turn = !(group.has_taken_turn ?? false);
-            this.updateTurnIndicator(turnIndicatorEl, group.has_taken_turn);
-            this.save();
-        });
-
-        const groupEl = container.createEl("div", {cls: "enemy-group"});
-
-        // Clicking anywhere else on the group shows the creature in its detail row (the only one, or the
-        // last selected); cells and the detail row select their own creature
-        groupEl.addEventListener("click", (e) => {
-            if ((e.target as HTMLElement).closest(".creature-instance-cell, .creature-detail-row, .remove-group-btn")) return;
+        const bodyEl = card.createEl("div", {cls: "ds-it-group-body"});
+        // Clicking anywhere else on the group shows the creature in its focus row (the only one, or the
+        // last selected); tokens and the focus row select their own creature
+        bodyEl.addEventListener("click", (e) => {
+            if ((e.target as HTMLElement).closest(".creature-instance-cell, .creature-detail-row, button")) return;
             const shown = this.shownInstance(group);
             if (shown) {
                 this.selectCreature(group, `${group.creatures.indexOf(shown.creature)}-${shown.instance.id}`);
             }
         });
 
-        // Group Header with Name and Turn Indicator
-        const groupHeader = groupEl.createEl("div", {cls: "group-header"});
-        groupHeader.createEl("h4", {text: group.name});
+        const headerEl = bodyEl.createEl("div", {cls: "ds-it-group-header"});
+        headerEl.createEl("h4", {cls: "ds-it-group-name", text: group.name});
+
+        const states = group.creatures.flatMap((creature) =>
+            (creature.instances ?? []).map((instance) => staminaState(instance, creature, group))
+        );
+        const alive = states.filter((state) => state.status !== "dead").length;
+        if (!single) {
+            headerEl.createSpan({
+                cls: "ds-it-group-count",
+                text: `${alive}/${states.length}`,
+                attr: {title: `${alive} of ${states.length} creatures alive`},
+            });
+        }
+        if (group.is_squad) headerEl.createSpan({cls: "ds-it-tag", text: "Squad"});
+        card.toggleClass("is-defeated", states.length > 0 && alive === 0);
 
         // Remove the whole group from the encounter
-        const removeGroupEl = groupHeader.createEl("div", {cls: "remove-group-btn"});
-        setIcon(removeGroupEl, "trash-2");
-        removeGroupEl.title = "Remove group from encounter";
-        removeGroupEl.addEventListener("click", () => {
-            new ConfirmModal(
-                this.app,
-                "Remove enemy group?",
-                `Remove '${group.name}' and all its creatures from this encounter? This can't be undone from the tracker.`,
-                "Remove",
-                () => {
-                    const removedIndex = data.enemy_groups.indexOf(group);
-                    data.enemy_groups = data.enemy_groups.filter((g) => g !== group);
-                    // Keep the creature view on the same creature; clear it if it was in this group
-                    const selection = selections.get(this.ctx.sourcePath);
-                    if (selection?.kind === "creature") {
-                        if (selection.groupIndex === removedIndex) {
-                            selections.delete(this.ctx.sourcePath);
-                        } else if (selection.groupIndex > removedIndex) {
-                            selection.groupIndex -= 1;
-                        }
-                    }
-                    this.render();
-                    this.save();
-                }
-            ).open();
+        const removeEl = headerEl.createEl("button", {
+            cls: "ds-it-icon-button ds-it-remove",
+            attr: {"aria-label": "Remove group from encounter"},
+        });
+        setIcon(removeEl, "trash-2");
+        removeEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.confirmRemoveGroup(group);
         });
 
-        // Detailed Creature Row Container
-        const detailRowContainer = groupEl.createEl("div", {cls: "creature-detail-row"});
-
-        const selectedInstance = this.shownInstance(group);
-
-        if (selectedInstance) {
-            this.buildDetailedCreatureRow(detailRowContainer, selectedInstance.creature, selectedInstance.instance, group);
+        // The squad's shared stamina pool
+        const minion = group.is_squad ? group.creatures.find((creature) => creature.squad_role === "minion") : undefined;
+        if (minion) {
+            const poolEl = bodyEl.createEl("div", {cls: "ds-it-pool", attr: {"aria-label": "Edit the squad's Stamina pool"}});
+            poolEl.createSpan({cls: "ds-it-pool-label", text: "Squad pool"});
+            buildStaminaMeter(poolEl, staminaState({id: 0}, minion, group));
+            poolEl.addEventListener("click", (e) => {
+                e.stopPropagation();
+                this.openPoolModal(group, minion);
+            });
         }
 
-        // If the enemy group contains a single creature, no need for a grid
-        if (group.creatures.length === 1 && group.creatures[0].amount === 1) {
-            return;
+        const shown = this.shownInstance(group);
+        if (shown) {
+            this.buildCreatureRow(bodyEl, shown.creature, shown.instance, group, single);
         }
 
-        const rebuildGroup = () => {
-            container.empty();
-            this.buildEnemyGroupRow(container, group);
-            this.save();
-        };
+        // A single creature needs no tokens
+        if (single) return;
 
-        // Grid of Creature Instances
-        const instancesGrid = groupEl.createEl("div", {cls: "creature-instances-grid"});
-
-        // Create cells for all instances of all creatures in the group
+        const tokensEl = bodyEl.createEl("div", {cls: "ds-it-tokens"});
         group.creatures.forEach((creature, creatureIndex) => {
             creature.instances?.forEach((instance) => {
-                const cellEl = instancesGrid.createEl("div", {cls: "creature-instance-cell"});
-
-                const instanceKey = `${creatureIndex}-${instance.id}`;
-                cellEl.dataset.instanceKey = instanceKey;
-                this.setViewKey(cellEl, this.creatureSelectionKey(group, instanceKey));
-
-                // Handle selection highlighting
-                if (group.selectedInstanceKey === instanceKey) {
-                    cellEl.addClass("selected");
-                }
-
-                // Display creature image in the cell
-                const imgEl = cellEl.createEl("div", {cls: "instance-image"});
-                const imgSrcRaw = creature.image ?? null;
-                this.addImage(imgEl, imgSrcRaw, creature.name);
-
-                // Name below the image, so creatures sharing a token can be told apart
-                cellEl.createEl("div", {cls: "instance-name", text: creature.name})
-                    .title = `${creature.name} #${instance.id}`;
-
-                // Conditions of this instance, below the image (display only; edit them in the detail row)
-                const cellConditionsEl = cellEl.createEl("div", {cls: "instance-conditions"});
-                this.buildInstanceConditionIcons(cellConditionsEl, instance);
-
-                // Display health status below the image
-                const staminaEl = cellEl.createEl("div", {cls: "instance-stamina"});
-                this.updateStaminaDisplay(staminaEl, instance, creature, group);
-
-                // Click to update the detail row and show the creature in the creature view
-                cellEl.addEventListener("click", () => {
-                    instancesGrid.querySelectorAll(".creature-instance-cell").forEach((cell) => {
-                        cell.removeClass("selected");
-                    });
-                    cellEl.addClass("selected");
-
-                    detailRowContainer.empty();
-                    this.buildDetailedCreatureRow(detailRowContainer, creature, instance, group);
-                    this.selectCreature(group, instanceKey);
-
-                    // Persist the selected instance key
-                    group.selectedInstanceKey = instanceKey;
-                    this.save();
-                });
-
-                const openStaminaModal = () => {
-                    if (group.is_squad && creature.squad_role === "minion") {
-                        new MinionStaminaPoolModal(this.app, group, creature, data, this.ctx, rebuildGroup).open();
-                    } else {
-                        this.editCreatureStaminaModal(instance, creature, staminaEl, container).open();
-                    }
-                };
-
-                // Double-click (after selecting) or right-click (directly) to edit STAMINA;
-                // Ctrl+right-click kills this creature
-                cellEl.addEventListener("dblclick", openStaminaModal);
-                cellEl.addEventListener("contextmenu", (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.ctrlKey) {
-                        if (this.killCreatureInstance(group, creature, instance)) {
-                            rebuildGroup();
-                        }
-                    } else {
-                        openStaminaModal();
-                    }
-                });
-
-                // Middle-click to add conditions to this creature (regardless of the selection)
-                cellEl.addEventListener("auxclick", (e) => {
-                    if (e.button !== 1) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.openAddConditions(instance, rebuildGroup);
-                });
+                this.buildToken(tokensEl, group, creature, instance, `${creatureIndex}-${instance.id}`);
             });
         });
     }
 
-    private buildDetailedCreatureRow(
+    private confirmRemoveGroup(group: EnemyGroup): void {
+        const data = this.data;
+        new ConfirmModal(
+            this.app,
+            "Remove enemy group?",
+            `Remove '${group.name}' and all its creatures from this encounter? This can't be undone from the tracker.`,
+            "Remove",
+            () => {
+                const removedIndex = data.enemy_groups.indexOf(group);
+                data.enemy_groups = data.enemy_groups.filter((g) => g !== group);
+                // Keep the creature view on the same creature; clear it if it was in this group
+                const selection = selections.get(this.ctx.sourcePath);
+                if (selection?.kind === "creature") {
+                    if (selection.groupIndex === removedIndex) {
+                        selections.delete(this.ctx.sourcePath);
+                    } else if (selection.groupIndex > removedIndex) {
+                        selection.groupIndex -= 1;
+                    }
+                }
+                this.refresh();
+            }
+        ).open();
+    }
+
+    /** The group's focus row: the selected creature with its conditions and stamina. */
+    private buildCreatureRow(
         container: HTMLElement,
         creature: Creature,
         instance: CreatureInstance,
-        group: EnemyGroup
+        group: EnemyGroup,
+        single: boolean,
     ): void {
-        container.addClass("character-row");
+        const rowEl = container.createEl("div", {cls: "creature-detail-row ds-it-row ds-it-focus"});
 
         // Click to show this creature in the creature view
         const instanceKey = `${group.creatures.indexOf(creature)}-${instance.id}`;
-        this.setViewKey(container, this.creatureSelectionKey(group, instanceKey));
-        container.onclick = () => this.selectCreature(group, instanceKey);
+        this.setViewKey(rowEl, this.creatureSelectionKey(group, instanceKey));
+        rowEl.addEventListener("click", () => this.selectCreature(group, instanceKey));
+        this.onDoubleClick(rowEl, {kind: "creature", group, creature, instance});
+        this.onMiddleClick(rowEl, instance, `${creature.name} #${instance.id}`);
 
-        // Left: Creature Image
-        const imageEl = container.createEl("div", {cls: "character-image"});
-        const imgSrcRaw = creature.image ?? null;
-        this.addImage(imageEl, imgSrcRaw, creature.name);
+        const stamina = staminaState(instance, creature, group);
+        rowEl.addClass(`is-${stamina.status}`);
+        this.buildPortrait(rowEl, creature.image, creature.name);
 
-        // Middle: Creature Info
-        const infoEl = container.createEl("div", {cls: "character-info"});
+        const mainEl = rowEl.createEl("div", {cls: "ds-it-main"});
+        const nameEl = mainEl.createEl("div", {cls: "ds-it-name"});
+        nameEl.createSpan({text: single ? creature.name : `${creature.name} #${instance.id}`});
+        const role = this.roleLabel(creature);
+        if (role) nameEl.createSpan({cls: "ds-it-tag", text: role});
+        this.buildConditions(mainEl.createEl("div", {cls: "ds-it-conditions"}), instance, `${creature.name} #${instance.id}`);
 
-        // Top: Creature Name (include instance ID)
-        infoEl.createEl("div", {cls: "character-name", text: `${creature.name} #${instance.id}`});
-
-        // Bottom: Conditions
-        const conditionsEl = infoEl.createEl("div", {cls: "character-conditions"});
-        this.buildConditionIcons(conditionsEl, instance, () => {
-            const cellConditionsEl = container.parentElement?.querySelector(
-                `.creature-instance-cell[data-instance-key="${instanceKey}"] .instance-conditions`
-            );
-            if (cellConditionsEl instanceof HTMLElement) {
-                cellConditionsEl.empty();
-                this.buildInstanceConditionIcons(cellConditionsEl, instance);
-            }
+        const vitalsEl = rowEl.createEl("div", {cls: "ds-it-vitals"});
+        const meterEl = buildStaminaMeter(vitalsEl, stamina);
+        meterEl.addClass("is-clickable");
+        meterEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.openStaminaModal({kind: "creature", group, creature, instance});
         });
-
-        // Right: Health Info
-        const healthEl = container.createEl("div", {cls: "character-health"});
-        const staminaEl = healthEl.createEl("div", {cls: "character-stamina"});
-        this.updateStaminaDisplay(staminaEl, instance, creature, group);
-
-        if (group.is_squad && creature.squad_role === "minion") {
-            // For minions in a squad, edit the pool stamina
-            staminaEl.addEventListener("click", () => {
-                new MinionStaminaPoolModal(this.app, group, creature, this.data, this.ctx, () => {
-                    container.empty();
-                    this.buildDetailedCreatureRow(container, creature, instance, group);
-                    this.save();
-                }).open();
-            });
-        } else {
-            // For normal creatures and captains
-            staminaEl.addEventListener("click", () => {
-                this.editCreatureStaminaModal(instance, creature, staminaEl, container).open();
-            });
-        }
     }
 
-    private editCreatureStaminaModal(
-        instance: CreatureInstance,
-        creature: Creature,
-        staminaEl: HTMLElement,
-        container: HTMLElement
-    ) {
-        const staminaBar = StaminaBar.fromCreature(instance, creature);
-        const showWinded = creature.squad_role !== "minion";
-        return new StaminaEditModal(this.app, staminaBar, false, creature.name, () => {
-            staminaBar.updateCreature(instance);
-            this.updateStaminaDisplay(staminaEl, instance, creature);
-            this.save();
-
-            // Update the STAMINA in the grid cell as well
-            const gridCell = container.parentElement?.querySelector(
-                `.creature-instance-cell:nth-child(${instance.id}) .instance-stamina`
-            );
-            if (gridCell) {
-                this.updateStaminaDisplay(gridCell as HTMLElement, instance, creature);
-            }
-        }, showWinded);
-    }
-
-    private updateTurnIndicator(el: HTMLElement, hasTakenTurn: boolean): void {
-        el.empty();
-        if (hasTakenTurn) {
-            el.addClass("taken-turn");
-            setIcon(el, "check");
-        } else {
-            el.removeClass("taken-turn");
-            setIcon(el, "dot");
-        }
-    }
-
-    private updateStaminaDisplay(
-        staminaEl: HTMLElement,
-        character: Hero | CreatureInstance,
-        creature?: Creature,
-        group?: EnemyGroup
-    ): void {
-        if (group?.is_squad && creature?.squad_role === "minion") {
-            // For minions in squads, display the minion stamina pool or DEAD
-            if ((character as CreatureInstance).isDead) {
-                staminaEl.textContent = `DEAD`;
-                staminaEl.style.color = 'crimson';
-            } else {
-                const currentStamina = group.minion_stamina_pool ?? 0;
-                staminaEl.textContent = `${currentStamina}/${creature.max_stamina * creature.amount} (${creature.max_stamina})`;
-                staminaEl.style.color = 'var(--text-normal)';
-            }
-        } else {
-            const currentStamina = character.current_stamina ?? 0;
-            const tempStamina = character.temp_stamina ?? 0;
-            const maxStamina = this.isHero(character)
-                ? (character as Hero).max_stamina
-                : creature?.max_stamina ?? 0;
-
-            // Creatures other than heroes die at 0 stamina, shown like a dead minion
-            if (!this.isHero(character) && currentStamina <= 0 && tempStamina <= 0) {
-                staminaEl.textContent = `DEAD`;
-                staminaEl.style.color = 'crimson';
-                staminaEl.removeClass("is-winded");
-                staminaEl.title = "";
-                return;
-            }
-
-            let displayText = `${currentStamina}`;
-            if (tempStamina > 0) {
-                displayText += `(+${tempStamina})`;
-            }
-            displayText += `/${maxStamina}`;
-
-            staminaEl.textContent = displayText;
-
-            if (currentStamina < 0) {
-                staminaEl.style.color = "red";
-            } else if (tempStamina > 0) {
-                staminaEl.style.color = "green";
-            } else {
-                staminaEl.style.color = "";
-            }
-
-            // Winded: at or below half of max stamina (heroes and enemies, but not minions)
-            const winded = creature?.squad_role !== "minion" && Stamina.isWinded(currentStamina, maxStamina);
-            staminaEl.toggleClass("is-winded", winded);
-            staminaEl.title = winded ? `Winded (half of ${maxStamina} stamina is ${Stamina.windedThreshold(maxStamina)})` : "";
-            if (winded && staminaEl.hasClass("character-stamina")) {
-                staminaEl.createEl("span", {cls: "stamina-winded-tag", text: "Winded"});
-            }
-
-            // Dying (0 or less) / Dead (negative half of max) only apply to heroes
-            if (this.isHero(character) && staminaEl.hasClass("character-stamina")) {
-                this.addDyingTag(staminaEl, currentStamina, maxStamina);
-            }
-        }
-    }
-
-    private addDyingTag(staminaEl: HTMLElement, currentStamina: number, maxStamina: number): void {
-        const status = Stamina.status(currentStamina, maxStamina, true);
-        if (status === "dying" || status === "dead") {
-            staminaEl.createEl("span", {cls: "stamina-dying-tag", text: status === "dying" ? "Dying" : "Dead"});
-            staminaEl.title = status === "dying"
-                ? `Dying (dead at ${Stamina.minimumStamina(maxStamina, true)})`
-                : "Dead";
-        }
-    }
-
-    private buildConditionIcons(
+    /** One creature of a group: its portrait ringed by its stamina, with conditions and stamina below. */
+    private buildToken(
         container: HTMLElement,
-        character: Hero | CreatureInstance,
-        onChange?: () => void
+        group: EnemyGroup,
+        creature: Creature,
+        instance: CreatureInstance,
+        instanceKey: string,
     ): void {
-        const conditions = character.conditions || [];
+        const stamina = staminaState(instance, creature, group);
+        const squadMinion = group.is_squad && creature.squad_role === "minion";
+        const tokenEl = container.createEl("div", {
+            cls: `creature-instance-cell ds-it-token is-${stamina.status}`,
+            attr: {title: `${creature.name} #${instance.id}`},
+        });
+        tokenEl.dataset.instanceKey = instanceKey;
+        this.setViewKey(tokenEl, this.creatureSelectionKey(group, instanceKey));
+        tokenEl.toggleClass("selected", group.selectedInstanceKey === instanceKey);
 
+        // Minions in a squad share the pool: their ring only shows alive or dead
+        const ringEl = tokenEl.createEl("div", {cls: "ds-it-token-ring"});
+        ringEl.style.setProperty("--ds-it-hp", `${squadMinion && stamina.status !== "dead" ? 1 : stamina.ratio}`);
+        this.addImage(ringEl.createEl("div", {cls: "ds-it-token-image"}), creature.image, creature.name);
+        if (stamina.status === "dead") {
+            setIcon(ringEl.createEl("div", {cls: "ds-it-token-skull"}), "skull");
+        }
+        ringEl.createEl("div", {cls: "ds-it-token-id", text: `${instance.id}`});
+
+        // Names tell creatures apart at a glance, also without an image
+        tokenEl.createEl("div", {cls: "ds-it-token-name", text: creature.name});
+        const conditionsEl = tokenEl.createEl("div", {cls: "ds-it-token-conditions"});
+        (instance.conditions || []).forEach((entry) => this.renderConditionIcon(conditionsEl, entry));
+
+        if (!squadMinion && stamina.status !== "dead") {
+            setStaminaText(tokenEl.createEl("div", {cls: "ds-it-token-stamina"}), stamina);
+        }
+
+        // Click to show it in the focus row and the creature view
+        tokenEl.addEventListener("click", () => this.focusCreature(group, instanceKey));
+
+        // Double-click (after selecting) or right-click (directly) to edit Stamina;
+        // Ctrl+right-click kills this creature
+        const viewed: ViewedCreature = {kind: "creature", group, creature, instance};
+        tokenEl.addEventListener("dblclick", () => this.openStaminaModal(viewed));
+        tokenEl.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!e.ctrlKey) {
+                this.openStaminaModal(viewed);
+            } else if (this.killCreatureInstance(group, creature, instance)) {
+                this.refresh();
+            }
+        });
+        this.onMiddleClick(tokenEl, instance, `${creature.name} #${instance.id}`);
+    }
+
+    /**
+     * The conditions of a hero or creature: click one to remove it, or the plus to add more. `labeled` shows
+     * each condition's name next to its icon.
+     */
+    private buildConditions(container: HTMLElement, character: Hero | CreatureInstance, name: string, labeled = false): void {
+        const conditions = character.conditions || [];
         conditions.forEach((conditionEntry) => {
-            const iconEl = this.renderConditionIcon(container, conditionEntry);
-            iconEl?.addEventListener("click", () => {
+            const iconEl = this.renderConditionIcon(container, conditionEntry, labeled);
+            if (!iconEl) return;
+            iconEl.addClass("is-removable");
+            iconEl.title = `${iconEl.title} (click to remove)`;
+            iconEl.addEventListener("click", (e) => {
+                e.stopPropagation();
                 character.conditions = conditions.filter((entry) => entry !== conditionEntry);
-                container.empty();
-                this.buildConditionIcons(container, character, onChange);
-                onChange?.();
-                this.save();
+                this.refresh();
             });
         });
 
-        const addConditionEl = container.createEl("div", {cls: "add-condition-icon"});
-        setIcon(addConditionEl, "plus-circle");
-        addConditionEl.title = "Add Condition";
-        addConditionEl.addEventListener("click", () => {
-            this.openAddConditions(character, () => {
-                container.empty();
-                this.buildConditionIcons(container, character, onChange);
-                onChange?.();
-                this.save();
-            });
+        const addEl = container.createEl("button", {cls: "ds-it-add-condition", attr: {"aria-label": "Conditions"}});
+        setIcon(addEl, "plus");
+        if (labeled && conditions.length === 0) addEl.createSpan({text: "Condition"});
+        addEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.openConditions(character, name);
         });
     }
 
-    /** Opens the Add Conditions modal for a hero or creature; `onAdded` runs after conditions were added. */
-    private openAddConditions(character: Hero | CreatureInstance, onAdded: () => void): void {
-        new AddConditionsModal(this.app, character, this.conditionManager, (newConditions) => {
-            character.conditions = (character.conditions || []).concat(newConditions);
-            onAdded();
+    /** Opens the conditions window of a hero or creature (`name`): each condition on or off, applied together. */
+    private openConditions(character: Hero | CreatureInstance, name: string): void {
+        new ConditionsModal(this.app, name, character.conditions ?? [], this.conditionManager, (conditions) => {
+            character.conditions = conditions;
+            this.refresh();
         }).open();
     }
 
@@ -1132,13 +1161,8 @@ export class InitiativeTracker implements HotkeyTarget {
         return true;
     }
 
-    /** Small, display-only condition icons for a creature instance cell in the grid. */
-    private buildInstanceConditionIcons(container: HTMLElement, instance: CreatureInstance): void {
-        (instance.conditions || []).forEach((conditionEntry) => this.renderConditionIcon(container, conditionEntry));
-    }
-
-    /** Renders one condition icon (with its color/effect customizations); null if the condition is unknown. */
-    private renderConditionIcon(container: HTMLElement, conditionEntry: string | Condition): HTMLElement | null {
+    /** Renders one condition (with its color/effect customizations); null if the condition is unknown. */
+    private renderConditionIcon(container: HTMLElement, conditionEntry: string | Condition, labeled = false): HTMLElement | null {
         let conditionKey: string;
         let conditionData: Condition | null = null;
         if (typeof conditionEntry === "string") {
@@ -1154,23 +1178,23 @@ export class InitiativeTracker implements HotkeyTarget {
         if (!condition) {
             return null;
         }
-        const iconEl = container.createEl("div", {cls: "condition-icon"});
+        const conditionEl = container.createEl("div", {cls: "ds-it-condition"});
+        conditionEl.toggleClass("is-labeled", labeled);
+        const iconEl = conditionEl.createSpan({cls: "condition-icon"});
         setIcon(iconEl, condition.iconName);
-        iconEl.title = condition.displayName;
+        if (labeled) conditionEl.createSpan({cls: "ds-it-condition-name", text: condition.displayName});
+        conditionEl.title = condition.displayName;
 
         // Apply color and effect customizations
         if (conditionData) {
             if (conditionData.color) {
-                iconEl.style.color = conditionData.color;
+                conditionEl.style.setProperty("--ds-it-condition-color", conditionData.color);
+                conditionEl.addClass("has-color");
             }
             if (conditionData.effect) {
                 iconEl.classList.add(`condition-effect-${conditionData.effect}`);
             }
         }
-        return iconEl;
-    }
-
-    private isHero(character: Hero | CreatureInstance): character is Hero {
-        return "isHero" in character ? character.isHero : false;
+        return conditionEl;
     }
 }

@@ -285,45 +285,67 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 (heroes, enemy groups, Malice) and, next to it, the [creature view](#creature-view) showing the selected hero's or
 creature's stats and abilities.
 
+### Toolbar
+
+The toolbar stays at the top of the tracker while you scroll:
+
+- **New round** clears every turn taken. Next to it, *2/6 acted* and a small bar show how many heroes and enemy
+  groups have taken their turn this round.
+- **Malice**: the current Malice, with **−** and **+** to spend or gain it.
+- **+** adds an enemy group ([Add Enemy Group](#add-enemy-group)), the save icon is
+  [Save Party State](#reset-encounter-state) (only with party heroes), and the history icon is
+  [Reset Encounter State](#reset-encounter-state). Hover over an icon to see what it does.
+
 ### Heroes
 
-- **Turn Indicator**: Click on the circle icon next to a hero's name to mark whether they have taken their turn.
-- **Stamina Management**: Click on the hero's stamina display to open a modal where you can:
+- **Turn**: Click the strip on the left of a hero's card to mark their turn as taken (a check); click it again to
+  undo. Heroes and groups that have acted fade back. The section header shows how many
+  are still to act.
+- **Stamina Management**: The stamina shows as numbers and a bar (green, yellow when winded, red when dying, and
+  temporary Stamina in cyan on top). Click it, or double-click the hero's card, to open a modal where you can:
 	- Apply damage or healing.
 	- Adjust temporary stamina points.
-- **Conditions**: Add or remove conditions affecting the hero. Middle-click a hero's row to open the Add Conditions
-  window directly.
+- **Conditions**: Click **+** to open the [conditions window](#conditions); click a condition to remove it.
+  Middle-click a hero's card to open the conditions window directly.
 
 ### Enemy Groups
 
-- **Turn Indicator**: Similar to heroes, click on the circle icon next to the enemy group's name.
+- **Turn**: As for heroes, click the strip on the left of the group's card. The header shows how many of the group's
+  creatures are still alive (for example *4/5*); a group with none left is struck through.
 - **Remove Group**: Hover over a group and click the trash icon next to its name to remove the whole group (all its
   creatures) from the encounter. You'll be asked to confirm.
-- **Creature Grid**:
-	- **Selection**: Click on a creature instance to view its details.
-	- **Conditions**: Each instance's conditions show as small icons under its portrait. Add or remove them in the
-	  details row of the selected instance.
+- **Selected creature**: Under the header, the group's selected creature has its own row with conditions and
+  stamina, like a hero. A group of one creature is just that row. Double-click the row to open its stamina window.
+- **Squad pool**: A minion squad shows its shared Stamina pool as a bar under the header. Click it to open the
+  Minion Stamina Pool modal.
+- **Tokens**: Every creature of the group as a round portrait with its number and name. The ring around it is its stamina
+  (yellow when winded); a dead creature is greyed out with a skull. Minions in a squad share the pool, so their ring
+  only shows whether they're alive.
+	- **Selection**: Click a token to make it the group's selected creature and show it in the creature view.
+	- **Conditions**: Each creature's conditions show as small icons under its portrait. Add or remove them in the
+	  selected creature's row or the creature view.
 	- **Health Management**:
 		- **Regular Creatures**: Double-click on a creature instance to open the health management modal, or
 		  right-click it to open the modal directly without selecting it first.
-		- **Minions**: Click on the stamina display of the minion group to open the Minion Stamina Pool modal, or
-		  right-click any minion in the grid.
+		- **Minions**: Click the squad pool to open the Minion Stamina Pool modal, or right-click any minion.
 	- **Kill**: Ctrl+right-click a creature to kill it. Regular creatures and captains drop to 0 stamina. For a
 	  minion, only that minion is marked dead and its stamina (one minion's max stamina) is taken out of the squad's
 	  pool, so earlier damage carries over (e.g. 4 minions with 3 stamina at 10/12: killing one leaves 7/9).
-	- **Conditions**: Middle-click a creature to open the Add Conditions window for it, without selecting it.
+	- **Conditions**: Middle-click a creature to open the conditions window for it, without selecting it.
 
 ### Creature View
 
 The creature view sits to the right of the tracker and shows whoever you select:
 
-- **Selecting**: Click a hero's row, a creature in a group's grid, or a group's details row. Clicking anywhere else
-  on an enemy group selects the creature in its details row: the only creature in the group, or the one last
-  selected in its grid. The selected row or cell is highlighted. Click the **×** in the view to clear it.
-- **Summary**: The top of the view shows the portrait, name (and instance number), group, stamina (with Winded,
-  Dying, or DEAD), conditions, and, for heroes, Recoveries. Click the stamina to open the same stamina window as in
-  the tracker (damage, healing, temporary Stamina, and Spend Recovery for heroes; the Stamina Pool modal for squad
-  minions). Conditions are changed in the tracker.
+- **Selecting**: Click a hero's card, a creature's token, or a group's selected creature. Clicking anywhere else
+  on an enemy group selects the creature in its row: the only creature in the group, or the one last selected.
+  The selected card and token are outlined. Use **‹** and **›** in the view to go to the previous or next hero (or
+  creature of the same group), and **×** to clear it.
+- **Summary**: The top of the view stays in place while you scroll the statblock. It shows the portrait, the group
+  (or *Hero*) with a Minion or Captain tag, the name (and instance number), conditions, a large stamina bar (with
+  Winded, Dying, or Dead), and, for heroes, Recoveries with **−**/**+**. Click the stamina to open the same stamina
+  window as in the tracker (damage, healing, temporary Stamina, and Spend Recovery for heroes; the Stamina Pool modal
+  for squad minions). Click **+** to add conditions, or a condition to remove it.
 - **Stamina stat**: In the statblock's stats row, Stamina shows the selected hero's or creature's current/max Stamina
   (the minion pool for squad minions) instead of the statblock's max. Clicking it opens the same stamina window.
 - **Statblock**: Below the summary is the statblock the hero or creature links to with `statblock`, rendered like a
@@ -343,8 +365,10 @@ example back into the note's text) turns them off, so they don't get in the way 
 | `D` | Open the stamina window (damage, healing) of the selected hero or creature |
 | `K` | Kill the selected creature (not heroes), like Ctrl+right-click |
 | `↓` / `↑` | Select the next / previous hero, or the next / previous creature in the selected creature's group (wraps around) |
-| `→` / `←` | Select the next / previous group: the heroes (first hero), then each enemy group (the creature in its details row). Wraps around, and works with nothing selected |
+| `→` / `←` | Select the next / previous group: the heroes (first hero), then each enemy group (its selected creature). Wraps around, and works with nothing selected |
 | `R` | Reset Round |
+| `C` | Open the [conditions window](#conditions) of the selected hero or creature |
+| `Shift+C` | Remove every condition from the selected hero or creature |
 
 In the stamina window, type a number in the **Apply** field (it has focus when the window opens) and press `Enter`
 to apply it as damage, or `Shift+Enter` to apply it as healing. Either one saves and closes the window, so `D`,
@@ -360,10 +384,12 @@ press the new key (with Ctrl, Alt, Shift, if you like; Escape cancels). The arro
 
 #### Layout, Resizing, and Scrolling
 
-- The tracker and the creature view each scroll on their own, so scrolling a long list of enemy groups doesn't
-  scroll the note.
-- Drag the bar between them to change how much width each gets, and drag the bar below them to change their
-  height. The sizes are saved in the plugin's settings and used by every Initiative Tracker.
+- The tracker and the creature view each scroll on their own. Scrolling anywhere over the tracker never scrolls
+  the note; scroll outside it to move the note.
+- By default the tracker is as tall as the note pane, and follows it when the window or pane is resized.
+- Drag the bar between them to change how much width each gets, and drag the bar below them to set a fixed
+  height. Double-click the bar below them to fit the note pane again. The sizes are saved in the plugin's settings
+  and used by every Initiative Tracker.
 - When the tracker is narrower than about 760px, the creature view moves below the tracker instead. Obsidian's
   **Readable line length** setting limits notes to about that width, so turn it off to have them side by side.
 
@@ -377,11 +403,11 @@ When the Stamina Pool of minions gets reduced to thresholds that would kill a mi
 
 ### Malice
 
-**Adjusting**: Use the up and down arrows next to the villain power display to increase or decrease the value.
+**Adjusting**: Use the **−** and **+** buttons around Malice in the toolbar.
 
 ### Add Enemy Group
 
-Click **Add Enemy Group** at the top of the tracker to add a group without editing the YAML:
+Click **+** in the tracker's toolbar to add a group without editing the YAML:
 
 1. Optionally enter a group name (it defaults to the first creature's name).
 2. In each creature row, start typing a monster name to get suggestions from the statblock notes in your vault
@@ -395,17 +421,17 @@ for minion statblocks.
 
 ### Reset Round
 
-Click the "Reset Round" button to clear all turn indicators and start a new round.
+Click **New round** in the toolbar (or press `R`) to clear all turn markers and start a new round.
 
 ### Reset Encounter State
 
-Click the "Reset Encounter State" button to put the encounter back to its starting state. Every creature comes back
+Click the history icon (**Reset encounter**) in the toolbar to put the encounter back to its starting state. Every creature comes back
 alive at full stamina (its max stamina is re-read from its statblock note), and all conditions, turns, and Malice
 are cleared. Heroes written in the tracker block go back to full stamina and Recoveries. **Warning: this is a
 destructive operation**
 
 Heroes from a party note or linked to a hero sheet keep their stamina and Recoveries, since those are shared across
-encounters. To be able to restore them, click **Save Party State** at the start of the encounter: it saves their
+encounters. To be able to restore them, click **Save Party State** (the save icon in the toolbar) at the start of the encounter: it saves their
 current Stamina, temporary Stamina, and Recoveries in the encounter block (`party_snapshot`), and **Reset Encounter
 State** then brings them back to it, updating the party note and hero sheets. Click it again to replace the saved
 state. The button only appears when the encounter has such heroes.
@@ -448,9 +474,10 @@ The stamina modal shows this for both heroes and enemies:
 - A live badge (**Winded**, **Dying**, or **Dead**) for the stamina the pending change would leave. The remaining
   stamina on the bar turns yellow while winded, and red while a hero is dying.
 
-In the tracker itself, a hero or enemy at or below the winded threshold gets a **Winded** tag next to their stamina.
-A hero at 0 stamina or less gets a red **Dying** tag instead (or **Dead** at negative half their maximum).
-A creature that isn't a hero shows **DEAD** at 0 stamina, like a dead minion.
+In the tracker itself, a hero or enemy at or below the winded threshold gets a **Winded** tag next to their stamina,
+and a yellow bar (or token ring). A notch on the bar marks the threshold. A hero at 0 stamina or less gets a red
+**Dying** tag instead (or **Dead** at negative half their maximum), and their card gets a red border.
+A creature that isn't a hero shows **Dead** with a skull at 0 stamina, like a dead minion.
 Winded status is display only; it does not add the Winded condition for you. Creatures with `squad_role: minion`
 never show winded values (in the modal or the tracker), since minions don't use them. Captains and other creatures do.
 
@@ -460,25 +487,40 @@ Conditions represent status effects affecting heroes or creatures, such as "daze
 
 ![initiative-tracker-add-conditions](Media/initiative-tracker-add-conditions.png)
 
-Adding a Condition to a Hero or Creature:
+The conditions window shows every condition, and those the hero or creature already has are marked **On**. A hero
+or creature has each condition at most once:
 
-- Click the "+" icon in the conditions section.
-- Select conditions from the list by clicking them.
-- Click "Add Conditions".
+- Open it with the **+** next to the conditions, by middle-clicking a card, row, or token, or with the `C` shortcut
+  for the selected hero or creature.
+- Click a condition to add it (**Add**). Click one it already has to take it off (**Remove**). Click again to
+  undo.
+- Click **Apply** to save the changes, or **Cancel** (Escape) to drop them. The footer counts what will be added
+  and removed.
 
-Optionally, you can customize the appearance of the condition:
+Everything works from the keyboard. The search field has focus when the window opens:
 
-- Open the condition customization modal:
-	- Click the "cog" icon when hovering over the condition in the "Add Conditions" modal **OR**
-	- Double-click the condition in the "Add Conditions" modal.
-- Change the color or effect with the provided selectors.
+| Key | Action |
+|---|---|
+| Typing | Filters the conditions by name |
+| `Enter` (in the search field) | Toggles the first match and clears the search; applies when the search is empty |
+| `↓` / `→` (in the search field) | Moves to the first condition |
+| `↑` `↓` `←` `→` | Moves between conditions (`↑` from the top row goes back to the search field) |
+| `Space` / `Enter` | Toggles the focused condition |
+| `Shift+Enter` | Customizes the focused condition's icon |
+| `Ctrl+Enter` | Applies from anywhere in the window |
+| `Escape` | Cancels |
+
+Optionally, you can customize the appearance of a condition: click the palette icon on it (shown when hovering) or
+press `Shift+Enter` on it, then change the color or effect. Customizing a condition also turns it on.
 
 The color and effect you save are remembered for that condition, so it looks the same the next time you add it
 to any hero or creature, in any note. Click **Reset** in the customization modal to go back to the default look.
 
-Removing a Condition:
+Removing conditions:
 
-- Click on the condition icon to remove it.
+- Click a condition's icon on a card, row, or in the creature view to remove it, or toggle it off in the conditions
+  window.
+- Press `Shift+C` to remove every condition from the selected hero or creature.
 
 ### Data Persistence
 

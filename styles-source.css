@@ -506,26 +506,6 @@ code.dsa {
 	position: relative;
 }
 
-/* Turn Indicator Styling */
-
-.turn-indicator {
-	cursor: pointer;
-}
-
-.turn-indicator svg {
-	margin: 1px;
-	height: calc(100% - 2px);
-	width: calc(100% - 2px);
-	color: var(--text-normal);
-	background-color: var(--code-background);
-	border-radius: 4px 0 0 4px;
-}
-
-.turn-indicator.taken-turn svg {
-	background-color: limegreen;
-	color: var(--code-background);
-}
-
 /* Top action bar */
 
 .top-action-bar {
@@ -539,8 +519,7 @@ code.dsa {
 
 /* Character Rows */
 
-.heroes-container .character-row,
-.enemy-group {
+.heroes-container .character-row {
 	position: relative;
 	padding-top: 1px;
 	padding-right: 1em;
@@ -551,9 +530,7 @@ code.dsa {
 /* Top-left border fade for character rows */
 
 .heroes-container .character-row::before,
-.enemy-group::before,
-.heroes-container .character-row::after,
-.enemy-group::after {
+.heroes-container .character-row::after {
 	content: '';
 	position: absolute;
 	background: linear-gradient(to right, transparent, var(--icon-color));
@@ -561,16 +538,14 @@ code.dsa {
 	width: 100%;
 }
 
-.heroes-container .character-row::before,
-.enemy-group::before {
+.heroes-container .character-row::before {
 	top: 0;
 	left: 0;
 	background: linear-gradient(to right, var(--icon-color), transparent);
 	width: 12em;
 }
 
-.heroes-container .character-row::after,
-.enemy-group::after {
+.heroes-container .character-row::after {
 	top: 0;
 	left: 0;
 	height: 100%;
@@ -579,217 +554,12 @@ code.dsa {
 	width: 1px; /* Border thickness */
 }
 
-/* Enemies Header */
-
-.enemies-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-/* Villain Power Styling */
-
-.malice-container {
-	font-weight: bold;
-	color: red;
-	display: flex;
-	align-items: center;
-}
-
-.malice-container .malice-modifiers {
-	visibility: hidden;
-	margin-right: 0.5em;
-}
-
-.malice-container:hover .malice-modifiers {
-	visibility: visible;
-}
-
-.malice-modifiers svg {
-	height: 100%;
-	width: 100%;
-}
-
-.malice-modifier {
-	cursor: pointer;
-	height: 24px;
-}
-
-.malice-modifier:hover {
-	background-color: var(--code-background);
-}
-
-.malice-text {
-	user-select: none;
-}
-
-/* Enemy Group Container */
-
-.enemy-group-container {
-	display: flex;
-}
-
-.enemy-group {
-	padding: 1em;
-	width: 100%;
-}
-
-.group-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-}
-
-.group-header h4 {
-	margin-top: 0;
-}
-
-.remove-group-btn {
-	display: flex;
-	cursor: pointer;
-	color: var(--text-faint);
-	visibility: hidden;
-}
-
-.enemy-group:hover .remove-group-btn,
-.is-mobile .remove-group-btn {
-	visibility: visible;
-}
-
-.remove-group-btn:hover {
-	color: var(--text-error);
-}
-
-/* Creature Group */
-
-.creature-group {
-	margin-bottom: 20px;
-}
-
-/* Detailed Creature Row */
-
-.creature-detail-row {
-	margin-bottom: 10px;
-}
-
-/* ============================= */
-/*    Creature Instances Grid     */
-/* ============================= */
-
-.creature-instances-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-	gap: 10px;
-}
-
-.creature-instance-cell {
-	text-align: center;
-	padding: 5px;
-	background-color: var(--color-base-30);
-	border: 1px solid transparent;
-	border-radius: 4px;
-	cursor: pointer;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	min-width: 80px;
-}
-
-.creature-instance-cell.selected {
-	border-color: #D50000;
-	box-shadow: 0 0 5px #D50000;
-}
-
-.instance-image {
-	width: 50px;
-	height: 50px;
-	margin-bottom: 5px;
-}
-
-.instance-image img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	pointer-events: none;
-}
-
-.instance-name {
-	font-size: 11px;
-	line-height: 1.2;
-	max-width: 100%;
-	margin-bottom: 2px;
-	overflow: hidden;
-	display: -webkit-box;
-	-webkit-line-clamp: 2;
-	-webkit-box-orient: vertical;
-	overflow-wrap: anywhere;
-	color: var(--text-muted);
-}
-
-.instance-conditions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 1px;
-	max-width: 100%;
-	margin-bottom: 2px;
-}
-
-.instance-conditions .condition-icon {
-	width: 16px;
-	height: 16px;
-	cursor: inherit;
-}
-
-.instance-conditions .condition-icon svg {
-	width: 14px;
-	height: 14px;
-}
-
-.instance-stamina {
-	font-size: 14px;
-	word-wrap: break-word;
-	text-align: center;
-	max-width: 100%;
-}
-
-/* Responsive Adjustments for Grid */
-
-@media (min-width: 600px) {
-	.creature-instances-grid {
-		grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-	}
-}
-
-@media (max-width: 599px) {
-	.creature-instances-grid {
-		grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
-	}
-
-	.creature-instance-cell {
-		min-width: 60px;
-	}
-
-	.instance-stamina {
-		font-size: 12px;
-	}
-}
-
 /* =========================== */
 /*    Hero and Character Rows  */
 /* =========================== */
 
 .hero-container {
 	display: flex;
-}
-
-.character-icon,
-.enemy-group-icon {
-	height: 1.5em;
-	width: 1.5em;
-	border: 1px solid var(--icon-color);
-	border-right: 0;
-	border-radius: 5px 0 0 5px;
 }
 
 .character-row {
@@ -857,11 +627,44 @@ code.dsa {
 	text-align: center;
 }
 
-/* Initiative tracker layout: tracker + creature view */
+/* ==================================== */
+/* Initiative tracker + creature view   */
+/* ==================================== */
 
 .ds-init-container {
 	container-type: inline-size;
 }
+
+.ds-it {
+	--ds-it-hero: var(--color-blue);
+	--ds-it-enemy: var(--color-red);
+	--ds-it-healthy: var(--color-green);
+	--ds-it-winded: var(--color-yellow);
+	--ds-it-winded-text: var(--color-orange);
+	--ds-it-dying: var(--color-red);
+	--ds-it-temp: var(--color-cyan);
+	--ds-it-malice: var(--color-red);
+	--ds-it-acted: var(--color-green);
+	--ds-it-surface: var(--background-secondary);
+	--ds-it-border: var(--background-modifier-border);
+	--ds-it-radius: 10px;
+	--ds-it-side: var(--interactive-accent);
+	font-size: var(--font-ui-medium);
+}
+
+.ds-it .is-heroes,
+.ds-it .ds-it-hero,
+.ds-it .ds-init-view-header.is-hero {
+	--ds-it-side: var(--ds-it-hero);
+}
+
+.ds-it .is-enemies,
+.ds-it .ds-it-group,
+.ds-it .ds-init-view-header.is-creature {
+	--ds-it-side: var(--ds-it-enemy);
+}
+
+/* Layout: tracker and creature view side by side, each scrolling on its own */
 
 .ds-init-layout {
 	--ds-init-height: 70vh;
@@ -869,7 +672,6 @@ code.dsa {
 	height: var(--ds-init-height);
 }
 
-/* Each side scrolls on its own, so the page doesn't have to */
 .ds-init-tracker,
 .ds-init-view {
 	flex: 1 1 0;
@@ -879,13 +681,13 @@ code.dsa {
 }
 
 .ds-init-tracker {
-	padding-right: 0.5em;
+	padding-right: 2px;
 }
 
 .ds-init-view {
-	background-color: var(--code-background);
-	border-radius: 4px;
-	padding: 0.75em;
+	background-color: var(--ds-it-surface);
+	border: 1px solid var(--ds-it-border);
+	border-radius: var(--ds-it-radius);
 }
 
 .ds-init-view.is-empty {
@@ -916,19 +718,19 @@ code.dsa {
 }
 
 .ds-init-splitter {
-	width: 1em;
+	width: 14px;
 	cursor: col-resize;
 }
 
 .ds-init-splitter::after {
-	top: 0;
-	bottom: 0;
+	top: calc(50% - 1.5em);
+	height: 3em;
 	left: calc(50% - 2px);
 	width: 4px;
 }
 
 .ds-init-height-handle {
-	height: 1em;
+	height: 14px;
 	cursor: row-resize;
 }
 
@@ -962,63 +764,1087 @@ code.dsa {
 	}
 }
 
-.ds-init-view-placeholder,
-.ds-init-view-message {
+/* Buttons */
+
+.ds-it .ds-it-button,
+.ds-it .ds-it-icon-button,
+.ds-it .ds-it-turn,
+.ds-it .ds-it-add-condition {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	border: 1px solid transparent;
+	box-shadow: none;
+	background: transparent;
 	color: var(--text-muted);
-	font-style: italic;
-	padding: 0.5em 0;
+	font: inherit;
+	cursor: pointer;
+	transition: background-color 0.12s, color 0.12s, border-color 0.12s;
 }
 
-.ds-init-view-message.error-message {
-	color: var(--text-error);
-	font-style: normal;
+.ds-it .ds-it-button {
+	gap: 6px;
+	height: 28px;
+	padding: 0 8px;
+	border-radius: 6px;
+	font-size: var(--font-ui-small);
 }
 
-.ds-init-view-header {
+.ds-it .ds-it-icon-button {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: 6px;
+	color: var(--text-faint);
+}
+
+.ds-it .ds-it-button:hover,
+.ds-it .ds-it-icon-button:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.ds-it-button-icon,
+.ds-it .ds-it-icon-button {
 	display: flex;
-	align-items: flex-start;
-	gap: 0.5em;
-	margin-bottom: 0.75em;
 }
 
-.ds-init-view-summary {
+.ds-it .ds-it-button svg,
+.ds-it .ds-it-icon-button svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* Small uppercase label (Squad, Minion, Captain) */
+.ds-it-tag {
+	flex: none;
+	padding: 1px 6px;
+	border-radius: 8px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1.5;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+}
+
+/* Toolbar: round, malice and encounter actions */
+
+.ds-it-toolbar {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	padding: 6px 8px;
+	margin-bottom: 14px;
+	background-color: var(--ds-it-surface);
+	border: 1px solid var(--ds-it-border);
+	border-radius: var(--ds-it-radius);
+}
+
+.ds-it-round {
 	display: flex;
 	align-items: center;
+	gap: 10px;
+}
+
+.ds-it .ds-it-round .ds-it-button {
+	color: var(--text-normal);
+	background-color: var(--interactive-normal);
+	border-color: var(--ds-it-border);
+}
+
+.ds-it .ds-it-round .ds-it-button:hover {
+	background-color: var(--interactive-hover);
+}
+
+.ds-it-round-progress {
+	display: grid;
+	grid-template-columns: auto auto;
+	justify-content: start;
+	align-items: baseline;
+	column-gap: 4px;
+	row-gap: 3px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+
+.ds-it-round-count {
+	font-weight: 700;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-it-round-bar {
+	grid-column: 1 / -1;
+	min-width: 60px;
+	height: 3px;
+	border-radius: 2px;
+	overflow: hidden;
+	background-color: var(--ds-it-border);
+}
+
+.ds-it-round-bar > div {
+	height: 100%;
+	background-color: var(--ds-it-acted);
+	transition: width 0.25s;
+}
+
+.ds-it-round-progress.is-complete .ds-it-round-count {
+	color: var(--ds-it-acted);
+}
+
+.ds-it-malice {
+	display: flex;
+	align-items: center;
+	margin-left: auto;
+	padding: 2px;
+	border-radius: 8px;
+	color: var(--ds-it-malice);
+	background-color: color-mix(in srgb, var(--ds-it-malice) 10%, transparent);
+	border: 1px solid color-mix(in srgb, var(--ds-it-malice) 35%, transparent);
+}
+
+.ds-it .ds-it-malice .ds-it-button {
+	width: 26px;
+	height: 26px;
+	padding: 0;
+	color: var(--ds-it-malice);
+}
+
+.ds-it .ds-it-malice .ds-it-button:hover {
+	background-color: color-mix(in srgb, var(--ds-it-malice) 18%, transparent);
+	color: var(--ds-it-malice);
+}
+
+.ds-it-malice-value {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0 4px;
+	user-select: none;
+}
+
+.ds-it-malice-icon {
+	display: flex;
+}
+
+.ds-it-malice-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.ds-it-malice-number {
+	min-width: 1.2em;
+	text-align: center;
+	font-size: 1.2em;
+	font-weight: 800;
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-it-malice-label {
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.ds-it-actions {
+	display: flex;
+	gap: 2px;
+}
+
+/* Sections */
+
+.ds-it-section {
+	margin-bottom: 18px;
+}
+
+.ds-it-section-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 2px 8px;
+}
+
+.ds-it-section-icon {
+	display: flex;
+	color: var(--ds-it-side);
+}
+
+.ds-it-section-icon svg {
+	width: 16px;
+	height: 16px;
+}
+
+.ds-it .ds-it-section-header h3 {
+	margin: 0;
+	padding: 0;
+	font-size: var(--font-ui-small);
+	font-weight: 700;
+	line-height: 1.4;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--text-normal);
+	border: 0;
+}
+
+.ds-it-section-count {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.ds-it-party {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	margin-left: auto;
+	min-width: 0;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.ds-it-party svg {
+	width: 12px;
+	height: 12px;
+}
+
+.ds-it-empty {
+	padding: 10px 12px;
+	font-size: var(--font-ui-small);
+	font-style: italic;
+	color: var(--text-faint);
+	border: 1px dashed var(--ds-it-border);
+	border-radius: var(--ds-it-radius);
+}
+
+/* Cards: a hero or an enemy group, with its turn toggle on the left */
+
+.ds-it-card {
+	position: relative;
+	display: flex;
+	margin-bottom: 6px;
+	overflow: hidden;
+	background-color: var(--ds-it-surface);
+	border: 1px solid var(--ds-it-border);
+	border-radius: var(--ds-it-radius);
+	transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.ds-it-card:hover {
+	border-color: var(--background-modifier-border-hover);
+}
+
+.ds-it-hero.is-viewed,
+.ds-it-group:has(.is-viewed) {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.ds-it .ds-it-turn {
+	flex: none;
+	width: 30px;
+	height: auto;
+	padding: 0;
+	border-radius: 0;
+	border: 0;
+	border-right: 1px solid var(--ds-it-border);
+	color: var(--ds-it-side);
+	background-color: color-mix(in srgb, var(--ds-it-side) 14%, transparent);
+}
+
+.ds-it .ds-it-turn:hover {
+	background-color: color-mix(in srgb, var(--ds-it-side) 26%, transparent);
+}
+
+.ds-it .ds-it-turn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.ds-it .has-acted > .ds-it-turn {
+	color: var(--ds-it-acted);
+	background-color: color-mix(in srgb, var(--ds-it-acted) 14%, transparent);
+}
+
+.ds-it .has-acted > .ds-it-turn svg {
+	stroke-width: 3;
+}
+
+/* Who has acted fades back (no hover undim: the card is rebuilt under the cursor after each change, which flickered) */
+.ds-it-card.has-acted > :not(.ds-it-turn) {
+	opacity: 0.55;
+}
+
+/* Rows: portrait, name and conditions, stamina */
+
+.ds-it-row {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 8px 10px;
+	cursor: pointer;
+}
+
+.ds-it-portrait {
+	flex: none;
+	width: 48px;
+	height: 48px;
+	overflow: hidden;
+	border-radius: 8px;
+	background-color: var(--background-modifier-hover);
+	box-shadow: inset 0 0 0 1px var(--ds-it-border);
+}
+
+.ds-it-portrait img,
+.ds-it-token-image img,
+.ds-cv-portrait img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	pointer-events: none;
+}
+
+/* Cut-out images (round tokens, transparent corners) show their own shape instead of a square frame */
+.ds-it-portrait.is-cutout,
+.ds-it-token-image.is-cutout,
+.ds-cv-portrait.is-cutout {
+	overflow: visible;
+	background: none;
+	box-shadow: none;
+	border-color: transparent;
+}
+
+.ds-it-portrait.is-cutout img,
+.ds-cv-portrait.is-cutout img {
+	object-fit: contain;
+}
+
+.ds-it-portrait.is-cutout img {
+	filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* The view's colored frame follows the image's outline */
+.ds-cv-portrait.is-cutout img {
+	filter:
+		drop-shadow(0 0 1px color-mix(in srgb, var(--ds-it-side) 80%, transparent))
+		drop-shadow(0 0 1px color-mix(in srgb, var(--ds-it-side) 80%, transparent))
+		drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.ds-it .is-dead .ds-it-portrait.is-cutout img,
+.ds-it .ds-init-view-summary.is-dead .ds-cv-portrait.is-cutout img {
+	filter: grayscale(1);
+}
+
+.ds-it-main {
 	flex: 1;
 	min-width: 0;
 }
 
-.ds-init-view-group {
-	color: var(--text-muted);
-	font-size: var(--font-smaller);
-}
-
-.ds-init-view-stats-stamina {
-	cursor: pointer;
-}
-
-.ds-init-view-stats-stamina:hover .ds-sb-stats-item-top {
-	text-decoration: underline;
-}
-
-.ds-init-view-recoveries {
-	color: var(--text-muted);
-	font-size: var(--font-smaller);
-	text-align: center;
-}
-
-.ds-init-view-summary .condition-icon {
-	cursor: default;
-}
-
-.ds-init-view-close {
+.ds-it-name {
 	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.ds-it-name > span:first-child {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.ds-it-hero .ds-it-name {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	display: block;
+}
+
+.ds-it-vitals {
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 4px;
+	width: 116px;
+}
+
+.ds-it .is-dead .ds-it-portrait img,
+.ds-it .ds-init-view-summary.is-dead .ds-cv-portrait img {
+	filter: grayscale(1);
+	opacity: 0.6;
+}
+
+.ds-it-hero.is-dying,
+.ds-it-hero.is-dead {
+	border-color: color-mix(in srgb, var(--ds-it-dying) 55%, transparent);
+}
+
+/* Conditions */
+
+.ds-it-conditions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 3px;
+	margin-top: 4px;
+	min-height: 22px;
+}
+
+.ds-it-condition {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 4px;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 3px;
+	border-radius: 11px;
+	color: var(--ds-it-condition-color, var(--text-normal));
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it-condition.has-color {
+	background-color: color-mix(in srgb, var(--ds-it-condition-color) 16%, transparent);
+}
+
+.ds-it-condition.is-labeled {
+	padding: 0 9px 0 6px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+}
+
+.ds-it-condition.is-removable {
 	cursor: pointer;
+}
+
+.ds-it-condition.is-removable:hover {
+	color: var(--text-error);
+	background-color: color-mix(in srgb, var(--text-error) 16%, transparent);
+}
+
+.ds-it-condition .condition-icon {
+	display: flex;
+}
+
+.ds-it-condition svg {
+	width: 14px;
+	height: 14px;
+}
+
+.ds-it .ds-it-add-condition {
+	gap: 4px;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 4px;
+	border-radius: 11px;
+	border: 1px dashed var(--ds-it-border);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	opacity: 0.7;
+}
+
+.ds-it .ds-it-add-condition svg {
+	width: 12px;
+	height: 12px;
+}
+
+.ds-it-row:hover .ds-it-add-condition,
+.ds-cv-conditions .ds-it-add-condition,
+.is-mobile .ds-it-add-condition {
+	opacity: 1;
+}
+
+.ds-it .ds-it-add-condition:hover {
+	color: var(--text-normal);
+	border-color: var(--text-muted);
+	border-style: solid;
+}
+
+/* Stamina: numbers, status and bar */
+
+.ds-it-stamina {
+	--ds-it-status: var(--ds-it-healthy);
+	--ds-it-status-text: var(--text-normal);
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	width: 100%;
+	min-width: 0;
+}
+
+.ds-it-stamina.is-winded {
+	--ds-it-status: var(--ds-it-winded);
+	--ds-it-status-text: var(--ds-it-winded-text);
+}
+
+.ds-it-stamina.is-dying,
+.ds-it-stamina.is-dead {
+	--ds-it-status: var(--ds-it-dying);
+	--ds-it-status-text: var(--ds-it-dying);
+}
+
+.ds-it-stamina.is-clickable {
+	cursor: pointer;
+	margin: -3px -5px;
+	padding: 3px 5px;
+	border-radius: 6px;
+	width: calc(100% + 10px);
+}
+
+.ds-it-stamina.is-clickable:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it-stamina-values {
+	display: flex;
+	align-items: baseline;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 0 2px;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-it-stamina-current {
+	font-size: 1.15em;
+	font-weight: 700;
+	color: var(--ds-it-status-text);
+}
+
+.ds-it-stamina-temp {
+	font-size: 0.85em;
+	font-weight: 700;
+	color: var(--ds-it-temp);
+}
+
+.ds-it-stamina-max {
+	font-size: 0.85em;
+	color: var(--text-muted);
+}
+
+.ds-it-status-tag {
+	align-self: center;
+	margin-left: 5px;
+	padding: 0 5px;
+	border-radius: 6px;
+	font-size: 9px;
+	font-weight: 800;
+	line-height: 1.6;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ds-it-status-text);
+	background-color: color-mix(in srgb, var(--ds-it-status) 20%, transparent);
+}
+
+.ds-it-stamina-dead {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	color: var(--text-faint);
 }
 
-.ds-init-view-close:hover {
+.ds-it-stamina-dead span {
+	display: flex;
+}
+
+.ds-it-stamina-dead svg {
+	width: 14px;
+	height: 14px;
+}
+
+.ds-it-meter {
+	position: relative;
+	height: 6px;
+	overflow: hidden;
+	border-radius: 3px;
+	background-color: var(--background-modifier-border);
+}
+
+.ds-it-meter-fill,
+.ds-it-meter-temp {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	transition: width 0.25s, left 0.25s;
+}
+
+.ds-it-meter-fill {
+	left: 0;
+	border-radius: 3px;
+	background-color: var(--ds-it-status);
+}
+
+.ds-it-meter-temp {
+	background-color: var(--ds-it-temp);
+}
+
+/* Where winded starts */
+.ds-it-meter-mark {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	margin-left: -1px;
+	background-color: var(--ds-it-surface);
+	opacity: 0.7;
+}
+
+/* Recoveries (shared control from the party view) */
+
+.ds-it .hero-recoveries {
+	margin-top: 0;
+	gap: 0;
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-it .recovery-adjust-btn {
+	padding: 1px;
+	border-radius: 4px;
+}
+
+.ds-it .recovery-adjust-btn:hover {
 	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+/* Enemy groups */
+
+.ds-it-group-body {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 8px 10px 10px;
+	cursor: pointer;
+}
+
+.ds-it-group-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 28px;
+}
+
+.ds-it .ds-it-group-name {
+	min-width: 0;
+	margin: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size: var(--font-ui-medium);
+	font-weight: 700;
+	line-height: 1.3;
+	color: var(--text-normal);
+}
+
+.ds-it-group.is-defeated .ds-it-group-name {
+	color: var(--text-muted);
+	text-decoration: line-through;
+}
+
+.ds-it-group-count {
+	flex: none;
+	padding: 0 6px;
+	border-radius: 8px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it .ds-it-remove {
+	margin-left: auto;
+	opacity: 0;
+}
+
+.ds-it-group:hover .ds-it-remove,
+.is-mobile .ds-it .ds-it-remove,
+.ds-it .ds-it-remove:focus-visible {
+	opacity: 1;
+}
+
+.ds-it .ds-it-remove:hover {
+	color: var(--text-error);
+}
+
+/* The selected creature of a group */
+.ds-it-focus {
+	padding: 6px 8px;
+	background-color: var(--background-primary);
+	border: 1px solid var(--ds-it-border);
+	border-radius: 8px;
+}
+
+.ds-it-focus.is-viewed {
+	border-color: color-mix(in srgb, var(--interactive-accent) 60%, transparent);
+}
+
+.ds-it-group.is-single .ds-it-focus {
+	padding: 0;
+	background: none;
+	border: 0;
+}
+
+/* A squad's shared stamina pool */
+.ds-it-pool {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 0 2px;
+	border-radius: 6px;
+}
+
+.ds-it-pool:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it-pool-label {
+	flex: none;
+	font-size: 10px;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.ds-it-pool .ds-it-stamina {
+	flex-direction: row-reverse;
+	align-items: center;
+	gap: 10px;
+}
+
+.ds-it-pool .ds-it-meter {
+	flex: 1;
+}
+
+/* Tokens: every creature of a group, ringed by its stamina */
+
+.ds-it-tokens {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+	gap: 4px;
+}
+
+.ds-it-token {
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+	padding: 6px 2px 4px;
+	text-align: center;
+	border: 1px solid transparent;
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.12s, border-color 0.12s;
+}
+
+.ds-it-token:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it-token.selected {
+	background-color: var(--background-primary);
+	border-color: var(--ds-it-border);
+}
+
+.ds-it-token.is-viewed {
+	border-color: var(--interactive-accent);
+}
+
+.ds-it-token-ring {
+	--ds-it-ring: var(--ds-it-healthy);
+	position: relative;
+	width: 46px;
+	height: 46px;
+	padding: 3px;
+	border-radius: 50%;
+	background: conic-gradient(var(--ds-it-ring) calc(var(--ds-it-hp, 1) * 360deg), var(--background-modifier-border) 0);
+}
+
+.ds-it-token.is-winded .ds-it-token-ring {
+	--ds-it-ring: var(--ds-it-winded);
+}
+
+.ds-it-token-image {
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+	border-radius: 50%;
+	border: 2px solid var(--ds-it-surface);
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-it-token.is-dead .ds-it-token-image {
+	filter: grayscale(1);
+	opacity: 0.45;
+}
+
+.ds-it-token-skull {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-normal);
+}
+
+.ds-it-token-skull svg {
+	width: 20px;
+	height: 20px;
+}
+
+.ds-it-token-id {
+	position: absolute;
+	right: -5px;
+	bottom: -3px;
+	min-width: 18px;
+	height: 18px;
+	padding: 0 4px;
+	border-radius: 9px;
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 16px;
+	font-variant-numeric: tabular-nums;
+	color: var(--text-muted);
+	background-color: var(--background-primary);
+	border: 1px solid var(--ds-it-border);
+}
+
+.ds-it-token-name {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	max-width: 100%;
+	overflow: hidden;
+	overflow-wrap: anywhere;
+	font-size: 11px;
+	line-height: 1.2;
+	color: var(--text-muted);
+}
+
+.ds-it-token-conditions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	max-width: 100%;
+}
+
+.ds-it-token-conditions:empty {
+	display: none;
+}
+
+.ds-it-token-conditions .ds-it-condition {
+	min-width: 16px;
+	height: 16px;
+	padding: 0;
+	background: none;
+}
+
+.ds-it-token-conditions .ds-it-condition svg {
+	width: 12px;
+	height: 12px;
+}
+
+.ds-it-token-stamina {
+	font-size: var(--font-ui-smaller);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.ds-it-token-stamina.is-winded {
+	color: var(--ds-it-winded-text);
+}
+
+.ds-it-token-stamina.has-temp {
+	color: var(--ds-it-temp);
+}
+
+/* Creature view */
+
+.ds-init-view-placeholder {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	max-width: 22em;
+	padding: 1.5em;
+	text-align: center;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+
+.ds-init-view-placeholder-icon {
+	display: flex;
+	color: var(--text-faint);
+}
+
+.ds-init-view-placeholder-icon svg {
+	width: 32px;
+	height: 32px;
+}
+
+.ds-init-view-placeholder-title {
+	font-size: var(--font-ui-medium);
+	font-weight: 700;
+	color: var(--text-normal);
+}
+
+.ds-init-view-header {
+	position: sticky;
+	top: 0;
+	z-index: 3;
+	padding: 12px;
+	border-bottom: 1px solid var(--ds-it-border);
+	background: linear-gradient(
+		to bottom,
+		color-mix(in srgb, var(--ds-it-side) 12%, var(--ds-it-surface)),
+		var(--ds-it-surface)
+	);
+}
+
+.ds-init-view-summary {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.ds-cv-identity {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	/* Room for the previous / next / close buttons */
+	padding-right: 92px;
+}
+
+.ds-cv-portrait {
+	flex: none;
+	width: 72px;
+	height: 72px;
+	overflow: hidden;
+	border-radius: 12px;
+	background-color: var(--background-modifier-hover);
+	box-shadow:
+		0 0 0 2px color-mix(in srgb, var(--ds-it-side) 55%, transparent),
+		0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.ds-cv-text {
+	min-width: 0;
+}
+
+.ds-cv-kicker {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--ds-it-side);
+}
+
+.ds-cv-name {
+	font-size: 1.35em;
+	font-weight: 800;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.ds-cv-conditions {
+	margin-top: 6px;
+}
+
+.ds-cv-vitals {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 14px;
+}
+
+.ds-cv-vitals .ds-it-stamina {
+	flex: 1;
+	width: auto;
+	min-width: 160px;
+}
+
+.ds-it-stamina.is-large .ds-it-stamina-values {
+	justify-content: flex-start;
+}
+
+.ds-it-stamina.is-large .ds-it-stamina-current {
+	font-size: 1.7em;
+	line-height: 1.1;
+}
+
+.ds-it-stamina.is-large .ds-it-stamina-max,
+.ds-it-stamina.is-large .ds-it-stamina-temp {
+	font-size: 1em;
+}
+
+.ds-it-stamina.is-large .ds-it-status-tag {
+	font-size: 10px;
+	padding: 1px 7px;
+}
+
+.ds-it-stamina.is-large .ds-it-meter {
+	height: 10px;
+	border-radius: 5px;
+}
+
+.ds-it .ds-cv-vitals .hero-recoveries {
+	padding: 2px 4px;
+	border-radius: 6px;
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-cv-controls {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	display: flex;
+	gap: 2px;
+}
+
+.ds-init-view-body {
+	padding: 4px 0 12px;
+}
+
+.ds-init-view-message {
+	padding: 1em 12px;
+	font-size: var(--font-ui-small);
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.ds-init-view-message.error-message {
+	margin: 12px;
+	color: var(--text-error);
+	font-style: normal;
 }
 
 /* The statblock already sits on the view's background */
@@ -1027,19 +1853,32 @@ code.dsa {
 	padding-bottom: 0;
 }
 
-/* Row / cell currently shown in the creature view */
-.ds-init-tracker .enemy-group,
-.ds-init-tracker .character-row {
+.ds-init-view-body .ds-container::before,
+.ds-init-view-body .ds-container::after {
+	display: none;
+}
+
+/* The statblock's Stamina stat shows the current stamina and edits it */
+.ds-init-view-stats-stamina {
 	cursor: pointer;
+	border-radius: 6px;
 }
 
-.ds-init-tracker .character-row.is-viewed {
-	box-shadow: inset 3px 0 0 var(--interactive-accent);
+.ds-init-view-stats-stamina:hover {
+	background-color: var(--background-modifier-hover);
 }
 
-.creature-instance-cell.is-viewed {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: -2px;
+.ds-init-view-stats-stamina .ds-sb-stats-item-top.is-winded {
+	color: var(--ds-it-winded-text);
+}
+
+.ds-init-view-stats-stamina .ds-sb-stats-item-top.is-dying,
+.ds-init-view-stats-stamina .ds-sb-stats-item-top.is-dead {
+	color: var(--ds-it-dying);
+}
+
+.ds-init-view-stats-stamina .ds-sb-stats-item-top.has-temp {
+	color: var(--ds-it-temp);
 }
 
 /* Add Enemy Group modal */
@@ -1776,74 +2615,202 @@ button.action-button {
 /*    Condition Modal    */
 /* ===================== */
 
-/* Conditions List */
-.conditions-list {
-	display: flex;
-	flex-wrap: wrap;
+/* Conditions window: each condition on or off */
+.ds-cond-modal-container {
+	width: min(620px, 92vw);
 }
 
-/* Condition Item */
-.condition-item {
+.ds-cond-header {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.ds-cond-header h2 {
+	margin: 0;
+}
+
+.ds-cond-subtitle {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--text-muted);
+}
+
+.ds-cond-modal .ds-cond-search {
+	width: 100%;
+	margin-bottom: 12px;
+}
+
+.ds-cond-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+	gap: 6px;
+}
+
+.ds-cond-group-label {
+	margin: 14px 2px 6px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.ds-cond-modal .ds-cond-item {
 	position: relative;
 	display: flex;
 	align-items: center;
-	width: calc(50% - 2em);
-	padding: 4px 1em;
-	/* padding-left: 1em; */
+	justify-content: flex-start;
+	gap: 8px;
+	height: auto;
+	min-height: 38px;
+	padding: 6px 10px;
+	text-align: left;
+	font-weight: 500;
+	color: var(--text-normal);
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	box-shadow: none;
 	cursor: pointer;
-	box-sizing: border-box;
-	transition: background-color 0.2s;
-	margin: 0 1em 0.25em 1em;
-	border: 2px solid transparent;
+	transition: background-color 0.1s, border-color 0.1s;
+}
+
+.ds-cond-modal .ds-cond-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-cond-modal .ds-cond-item:focus-visible,
+.ds-cond-modal .ds-cond-item.is-first-match {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+}
+
+.ds-cond-item.is-hidden,
+.ds-cond-group.is-hidden {
+	display: none !important;
+}
+
+.ds-cond-modal .ds-cond-item.is-on {
+	border-color: var(--interactive-accent);
+	background-color: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-secondary));
+}
+
+.ds-cond-modal .ds-cond-item.is-removing {
+	border-color: color-mix(in srgb, var(--text-error) 60%, transparent);
+	border-style: dashed;
+}
+
+.ds-cond-item.is-removing .ds-cond-label {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
+
+.ds-cond-icon {
+	display: flex;
+	flex: none;
+}
+
+.ds-cond-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.ds-cond-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.ds-cond-state {
+	flex: none;
+	font-size: 10px;
+	font-weight: 800;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--interactive-accent);
+}
+
+.ds-cond-item.is-removing .ds-cond-state {
+	color: var(--text-error);
+}
+
+.ds-cond-customize {
+	display: flex;
+	flex: none;
+	padding: 2px;
 	border-radius: 4px;
+	color: var(--text-faint);
+	opacity: 0;
 }
 
-.condition-item:hover {
-	background-color: var(--code-background);
+.ds-cond-item:hover .ds-cond-customize,
+.ds-cond-item:focus-visible .ds-cond-customize,
+.is-mobile .ds-cond-customize {
+	opacity: 1;
 }
 
-/* Selected Condition */
-.condition-item.selected {
-	border: 2px solid var(--interactive-accent);
-	border-radius: 4px;
+.ds-cond-customize:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
 }
 
-/* Condition Icon Preview */
-.condition-icon-preview {
-	font-size: 1.5em;
+.ds-cond-customize svg {
+	width: 14px;
+	height: 14px;
 }
 
-/* Condition Label */
-.condition-label {
-	margin-left: 8px;
-	flex-grow: 1;
+.ds-cond-footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
 }
 
-/* Customize Icon (Cog) */
-.condition-customize-icon {
-	margin-left: 8px;
-	cursor: pointer;
-	display: none; /* Hidden by default */
+.ds-cond-hints {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	flex: 1 1 100%;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
 }
 
-.condition-item:hover .condition-customize-icon {
-	display: inline-block; /* Show on hover */
+.ds-cond-hints kbd {
+	font-size: 0.9em;
 }
 
-.condition-customize-icon {
-	position: absolute;
-	right: 8px;
-	top: 50%;
-	transform: translateY(-50%);
+.ds-cond-summary {
+	display: flex;
+	gap: 8px;
+	font-size: var(--font-ui-small);
+	font-weight: 700;
+	color: var(--text-muted);
 }
 
-/* Customize Icon Size */
-.condition-customize-icon svg {
-	width: 1em;
-	height: 1em;
+.ds-cond-summary .is-adding {
+	color: var(--interactive-accent);
 }
 
-/* Horizontal Divider */
+.ds-cond-summary .is-removing {
+	color: var(--text-error);
+}
+
+.ds-cond-buttons {
+	display: flex;
+	gap: 8px;
+	margin-left: auto;
+}
+
+/* Divider (minion stamina pool modal) */
 .horizontal-divider {
 	width: 100%;
 	margin: 1em 0;
@@ -1852,12 +2819,10 @@ button.action-button {
 }
 
 /* Modal Buttons */
-.add-condition-modal .modal-buttons button,
 .customize-condition-modal .modal-buttons button {
 	margin: 1em 0 0 1em;
 }
 
-.add-condition-modal .modal-buttons,
 .customize-condition-modal .modal-buttons {
 	display: flex;
 	justify-content: flex-end;

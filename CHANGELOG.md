@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Initiative tracker: **redesigned**. A toolbar that stays at the top while you scroll, with **New round**, how many
+  have acted this round, Malice with always-visible **−**/**+**, and icon buttons for Add enemy group, Save party
+  state, and Reset encounter. Heroes and enemy groups are cards with a turn strip on the left; cards that have
+  acted fade back. Double-click a hero's card or a group's selected creature to open its stamina window. Stamina shows as a bar (winded, dying, temporary Stamina) with the numbers, and a group's
+  creatures as round tokens ringed by their stamina, with a skull when dead. Minion squads show their shared pool
+  under the group's name.
+- Creature view: **redesigned**. The summary stays at the top while scrolling the statblock and shows a larger
+  portrait, the group with a Minion/Captain tag, conditions (add and remove them here too), a large stamina bar, and
+  Recoveries with **−**/**+**. New **‹**/**›** buttons go to the previous/next hero or creature of the group.
+- Conditions window: **redesigned**. It shows the hero's or creature's current conditions, and each condition is on
+  or off, so it can't be added twice: picking one it already has removes it. Changes apply together with
+  **Apply**. Fully usable from the keyboard: type to filter, arrow keys to move, `Space` to toggle, `Enter` in the
+  search field to toggle the first match (or apply), `Ctrl+Enter` to apply, `Escape` to cancel.
+- Initiative tracker: new shortcuts `C` (open the selected hero's or creature's conditions window) and `Shift+C`
+  (remove all its conditions), changeable in the plugin settings.
+- Initiative tracker: by default it's as tall as the note pane (double-click the height handle to return to that
+  after dragging it), and scrolling over it no longer scrolls the note.
+- Initiative tracker and creature view: portraits with transparent corners (round tokens, cut-outs) show their own
+  shape instead of sitting in a square frame.
+
 ## 6.1.0
 
 - Initiative tracker: **Reset Encounter State** now brings every creature back alive at full stamina (re-read from
