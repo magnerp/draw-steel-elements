@@ -129,6 +129,23 @@ function bodyKey(viewed: ViewedCreature, data: any, entry?: StatblockEntry): str
  * The panel next to the initiative tracker showing the selected hero or creature: a summary (built by the
  * tracker, which owns stamina and condition rendering) followed by its statblock with stats and abilities.
  */
+/** What the creature view needs from the tracker, which owns stamina, conditions and the selection. */
+export interface CreatureViewHooks {
+    // Portrait, name, conditions and stamina at the top of the view
+    buildSummary: (container: HTMLElement, viewed: ViewedCreature) => void;
+    // Shows the current stamina in an element and makes clicking it edit the stamina, like in the tracker
+    bindStamina: (staminaEl: HTMLElement, viewed: ViewedCreature) => void;
+    onClose: () => void;
+    // Shows the next (1) or previous (-1) hero, or creature of the same group
+    onStep: (step: number) => void;
+    // How many heroes, or creatures in the group, onStep goes through
+    siblingCount: (viewed: ViewedCreature) => number;
+}
+
+/**
+ * The panel next to the initiative tracker showing the selected hero or creature: a summary (built by the
+ * tracker) followed by its statblock with stats and abilities.
+ */
 export class CreatureView {
     // Guards against a slow statblock load rendering into a panel that has since moved on
     private renderToken = 0;
@@ -137,10 +154,7 @@ export class CreatureView {
         private plugin: DrawSteelAdmonitionPlugin,
         private statblocks: StatblockCache,
         private ctx: MarkdownPostProcessorContext,
-        private buildSummary: (container: HTMLElement, viewed: ViewedCreature) => void,
-        private onClose: () => void,
-        // Shows the current stamina in an element and makes clicking it edit the stamina, like in the tracker
-        private bindStamina: (staminaEl: HTMLElement, viewed: ViewedCreature) => void,
+        private hooks: CreatureViewHooks,
     ) {
     }
 
@@ -150,19 +164,17 @@ export class CreatureView {
 
         if (!viewed) {
             container.addClass("is-empty");
-            container.createEl("div", {
-                cls: "ds-init-view-placeholder",
-                text: "Select a hero or creature to see its stats and abilities.",
-            });
+            const placeholderEl = container.createEl("div", {cls: "ds-init-view-placeholder"});
+            setIcon(placeholderEl.createEl("div", {cls: "ds-init-view-placeholder-icon"}), "scroll");
+            placeholderEl.createEl("div", {cls: "ds-init-view-placeholder-title", text: "Nothing selected"});
+            placeholderEl.createEl("div", {text: "Click a hero or creature in the tracker to see its stats and abilities here."});
             return;
         }
         container.removeClass("is-empty");
 
-        const header = container.createEl("div", {cls: "ds-init-view-header"});
-        this.buildSummary(header.createEl("div", {cls: "ds-init-view-summary"}), viewed);
-        const closeEl = header.createEl("div", {cls: "ds-init-view-close", attr: {"aria-label": "Close"}});
-        setIcon(closeEl, "x");
-        closeEl.addEventListener("click", () => this.onClose());
+        const header = container.createEl("div", {cls: `ds-init-view-header is-${viewed.kind}`});
+        this.hooks.buildSummary(header.createEl("div", {cls: "ds-init-view-summary"}), viewed);
+        this.buildControls(header.createEl("div", {cls: "ds-cv-controls"}), viewed);
 
         const statblock = viewed.kind === "hero" ? viewed.hero.statblock : viewed.creature.statblock;
 
@@ -189,6 +201,21 @@ export class CreatureView {
                 });
             }
         }
+    }
+
+    /** Previous / next hero or creature of the group, and close. */
+    private buildControls(container: HTMLElement, viewed: ViewedCreature): void {
+        const button = (icon: string, label: string, onClick: () => void) => {
+            const buttonEl = container.createEl("button", {cls: "ds-it-icon-button", attr: {"aria-label": label}});
+            setIcon(buttonEl, icon);
+            buttonEl.addEventListener("click", onClick);
+        };
+        if (this.hooks.siblingCount(viewed) > 1) {
+            const what = viewed.kind === "hero" ? "hero" : "creature in the group";
+            button("chevron-left", `Previous ${what}`, () => this.hooks.onStep(-1));
+            button("chevron-right", `Next ${what}`, () => this.hooks.onStep(1));
+        }
+        button("x", "Close", () => this.hooks.onClose());
     }
 
     /**
@@ -237,7 +264,7 @@ export class CreatureView {
             // A kept body still has the previous render's click handler: replace the element to drop it
             const valueEl = createDiv({cls: "ds-sb-stats-item-top"});
             oldValueEl.replaceWith(valueEl);
-            this.bindStamina(valueEl, viewed);
+            this.hooks.bindStamina(valueEl, viewed);
             if (item.hasClass("ds-init-view-stats-stamina")) return;
             item.addClass("ds-init-view-stats-stamina");
             // The whole stat (value and label) is the click target

@@ -8,11 +8,16 @@ export const HOTKEY_ACTIONS: { action: InitiativeHotkeyAction; scope: HotkeyScop
     {action: "kill", scope: "tracker", name: "Kill", desc: "Kill the selected creature (not heroes)."},
     {action: "selectNext", scope: "tracker", name: "Select next", desc: "Select the next hero, or the next creature in the selected creature's group."},
     {action: "selectPrevious", scope: "tracker", name: "Select previous", desc: "Select the previous hero, or the previous creature in the selected creature's group."},
-    {action: "nextGroup", scope: "tracker", name: "Next group", desc: "Select the next group: the heroes first, then each enemy group (its creature in the detail row)."},
-    {action: "previousGroup", scope: "tracker", name: "Previous group", desc: "Select the previous group: the heroes first, then each enemy group (its creature in the detail row)."},
+    {action: "nextGroup", scope: "tracker", name: "Next group", desc: "Select the next group: each hero first, then each enemy group (its selected creature)."},
+    {action: "previousGroup", scope: "tracker", name: "Previous group", desc: "Select the previous group: each hero first, then each enemy group (its selected creature)."},
+    {action: "jumpNextGroup", scope: "tracker", name: "Jump to next group", desc: "Like Next group, but the heroes count as one group, so it jumps from any hero to the first enemy group."},
+    {action: "jumpPreviousGroup", scope: "tracker", name: "Jump to previous group", desc: "Like Previous group, but the heroes count as one group, so it jumps from any hero to the last enemy group."},
+    {action: "toggleTurn", scope: "tracker", name: "Toggle turn", desc: "Mark the selected hero's or creature group's turn as taken, or undo it."},
     {action: "resetRound", scope: "tracker", name: "Reset round", desc: "Mark every hero and enemy group as not having taken their turn."},
-    {action: "applyDamage", scope: "stamina", name: "Apply as damage", desc: "In the stamina window's Apply field: deal the number as damage and save."},
-    {action: "applyHealing", scope: "stamina", name: "Apply as healing", desc: "In the stamina window's Apply field: heal the number and save."},
+    {action: "editConditions", scope: "tracker", name: "Conditions", desc: "Open the conditions window of the selected hero or creature: pick a condition to add it, or one it has to remove it."},
+    {action: "clearConditions", scope: "tracker", name: "Clear conditions", desc: "Remove every condition from the selected hero or creature."},
+    {action: "applyDamage", scope: "stamina", name: "Apply as damage", desc: "In the stamina window's amount field: deal the number as damage and save."},
+    {action: "applyHealing", scope: "stamina", name: "Apply as healing", desc: "In the stamina window's amount field: heal the number and save."},
 ];
 
 // The plugin's settings, for windows opened from many places (e.g. the stamina window)
@@ -40,9 +45,27 @@ export function hotkeyFromEvent(e: KeyboardEvent): string | null {
     return parts.join("+");
 }
 
+// Modifier keys in the order hotkey strings list them
+const MODIFIERS = ["Ctrl", "Alt", "Shift", "Meta"];
+
+/** The modifiers of a hotkey such as "Ctrl+Shift+Enter", as "Ctrl+Shift". */
+export function modifiersOfHotkey(hotkey: string): string {
+    return hotkey.split("+").slice(0, -1).filter((part) => MODIFIERS.includes(part)).join("+");
+}
+
+/** The modifiers held during a key event, as "Ctrl+Shift". */
+export function modifiersOfEvent(e: KeyboardEvent): string {
+    return MODIFIERS.filter((_, i) => [e.ctrlKey, e.altKey, e.shiftKey, e.metaKey][i]).join("+");
+}
+
 /** The hotkey bound to an action ("" when turned off); the default before the settings are loaded. */
 export function hotkeyFor(settings: DSESettings | null, action: InitiativeHotkeyAction): string {
     return settings?.hotkeys?.[action] ?? DEFAULT_HOTKEYS[action];
+}
+
+/** The hotkey bound to an action in the current settings, for showing it in a window ("" when turned off). */
+export function currentHotkeyFor(action: InitiativeHotkeyAction): string {
+    return hotkeyFor(settingsSource?.() ?? null, action);
 }
 
 /** The action of `scope` bound to a key press, if any. */

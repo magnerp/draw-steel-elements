@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+- Initiative tracker: **redesigned**. A toolbar that stays at the top while you scroll, with **New round**, how many
+  have acted this round, Malice with always-visible **−**/**+**, and icon buttons for Add enemy group, Save party
+  state, and Reset encounter. Heroes and enemy groups are cards with a turn strip on the left; cards that have
+  acted fade back. Double-click a hero's card or a group's selected creature to open its stamina window. Stamina shows as a bar (winded, dying, temporary Stamina) with the numbers, and a group's
+  creatures as round tokens ringed by their stamina, with a skull when dead. Minion squads show their shared pool
+  under the group's name.
+- Creature view: **redesigned**. The summary stays at the top while scrolling the statblock and shows a larger
+  portrait, the group with a Minion/Captain tag, conditions (add and remove them here too), a large stamina bar, and
+  Recoveries with **−**/**+**. New **‹**/**›** buttons go to the previous/next hero or creature of the group.
+- Conditions window: **redesigned**. It shows the hero's or creature's current conditions, and each condition is on
+  or off, so it can't be added twice: picking one it already has removes it. Changes apply together with
+  **Apply**. Fully usable from the keyboard: type to filter, arrow keys to move, `Space` to toggle, `Enter` in the
+  search field to toggle the first match (or apply), `Ctrl+Enter` to apply, `Escape` to cancel.
+- Stamina window (damage and healing): **redesigned** to match. A summary card shows the stamina before and after
+  the pending changes, the change, the resulting status (winded, dying, dead) and a bar with the damage or healing
+  marked on it. The bar shades and labels the winded (and, for heroes, dying) zones. Hovering **Damage** or
+  **Heal**, or typing the amount, previews the result on the bar before you apply it (typing previews damage;
+  holding the healing shortcut's modifier, `Shift` by default, previews healing). The buttons show their
+  shortcuts, Stamina and Temporary Stamina can be set directly, and **Kill**, **Full heal** and **Recovery** are one click. The footer lists what will
+  change, with **Reset**, **Cancel** and **Apply**; `Ctrl+Enter` applies from anywhere in the window.
+- Minion Stamina Pool window: **redesigned** like the stamina window. The summary shows the pool before and after,
+  how many minions die, and a bar split at each minion with the same damage/healing preview. Damage goes to a number
+  of minions at once with **Damage**, and a new **Heal** button heals the pool. The minions to kill are picked from
+  cards that show their conditions, with a counter of how many are left to pick; the arrow keys move between them.
+- Initiative tracker: a squad minion's token ring and number show its share of the Squad pool, so the minion that
+  dies next shows the damage taken so far, like any other creature's token.
+- Initiative tracker: new **Toggle turn** shortcut (`Space` by default) marks the selected hero's or creature
+  group's turn as taken, or undoes it.
+- Initiative tracker: **Next group** / **Previous group** stop at each hero, so moving past the last hero goes on to
+  the first enemy group. New **Jump to next group** / **Jump to previous group** shortcuts (`Ctrl+→` / `Ctrl+←` by
+  default) treat the heroes as one group and jump from any hero straight to an enemy group.
+- Initiative tracker: opening a note with a tracker turns its keyboard shortcuts on, without clicking it first.
+  Typing in the note's editor still works until the tracker is clicked.
+- Initiative tracker: switching groups with the arrow keys scrolls the whole group (and its section header, for the
+  first one) into view below the toolbar, instead of leaving it partly under the toolbar.
+- Initiative tracker: new shortcuts `C` (open the selected hero's or creature's conditions window) and `Shift+C`
+  (remove all its conditions), changeable in the plugin settings.
+- Initiative tracker: by default it's as tall as the note pane (double-click the height handle to return to that
+  after dragging it), and scrolling over it no longer scrolls the note.
+- Initiative tracker and creature view: portraits with transparent corners (round tokens, cut-outs) show their own
+  shape instead of sitting in a square frame.
+
 ## 6.1.0
 
 - Initiative tracker: **Reset Encounter State** now brings every creature back alive at full stamina (re-read from
