@@ -26,7 +26,7 @@ import {StaminaBar} from "@model/StaminaBar";
 import {PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
 import {CreatureView, StatblockCache, ViewedCreature} from "@drawSteelAdmonition/initiative/CreatureView";
-import {buildStaminaMeter, setStaminaText, staminaState} from "@drawSteelAdmonition/initiative/StaminaMeter";
+import {buildStaminaMeter, minionShareState, setStaminaText, staminaState} from "@drawSteelAdmonition/initiative/StaminaMeter";
 import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
 import {HotkeyTarget} from "@drawSteelAdmonition/initiative/TrackerHotkeys";
 import {InitiativeHotkeyAction} from "@model/Settings";
@@ -1062,9 +1062,10 @@ export class InitiativeTracker implements HotkeyTarget {
         this.setViewKey(tokenEl, this.creatureSelectionKey(group, instanceKey));
         tokenEl.toggleClass("selected", group.selectedInstanceKey === instanceKey);
 
-        // Minions in a squad share the pool: their ring only shows alive or dead
+        // Minions in a squad share the pool: their ring shows their share of it
+        const ringStamina = squadMinion && stamina.status !== "dead" ? minionShareState(instance, creature, group) : stamina;
         const ringEl = tokenEl.createEl("div", {cls: "ds-it-token-ring"});
-        ringEl.style.setProperty("--ds-it-hp", `${squadMinion && stamina.status !== "dead" ? 1 : stamina.ratio}`);
+        ringEl.style.setProperty("--ds-it-hp", `${ringStamina.ratio}`);
         this.addImage(ringEl.createEl("div", {cls: "ds-it-token-image"}), creature.image, creature.name);
         if (stamina.status === "dead") {
             setIcon(ringEl.createEl("div", {cls: "ds-it-token-skull"}), "skull");
@@ -1076,8 +1077,8 @@ export class InitiativeTracker implements HotkeyTarget {
         const conditionsEl = tokenEl.createEl("div", {cls: "ds-it-token-conditions"});
         (instance.conditions || []).forEach((entry) => this.renderConditionIcon(conditionsEl, entry));
 
-        if (!squadMinion && stamina.status !== "dead") {
-            setStaminaText(tokenEl.createEl("div", {cls: "ds-it-token-stamina"}), stamina);
+        if (stamina.status !== "dead") {
+            setStaminaText(tokenEl.createEl("div", {cls: "ds-it-token-stamina"}), ringStamina);
         }
 
         // Click to show it in the focus row and the creature view

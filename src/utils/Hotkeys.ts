@@ -13,8 +13,8 @@ export const HOTKEY_ACTIONS: { action: InitiativeHotkeyAction; scope: HotkeyScop
     {action: "resetRound", scope: "tracker", name: "Reset round", desc: "Mark every hero and enemy group as not having taken their turn."},
     {action: "editConditions", scope: "tracker", name: "Conditions", desc: "Open the conditions window of the selected hero or creature: pick a condition to add it, or one it has to remove it."},
     {action: "clearConditions", scope: "tracker", name: "Clear conditions", desc: "Remove every condition from the selected hero or creature."},
-    {action: "applyDamage", scope: "stamina", name: "Apply as damage", desc: "In the stamina window's Apply field: deal the number as damage and save."},
-    {action: "applyHealing", scope: "stamina", name: "Apply as healing", desc: "In the stamina window's Apply field: heal the number and save."},
+    {action: "applyDamage", scope: "stamina", name: "Apply as damage", desc: "In the stamina window's amount field: deal the number as damage and save."},
+    {action: "applyHealing", scope: "stamina", name: "Apply as healing", desc: "In the stamina window's amount field: heal the number and save."},
 ];
 
 // The plugin's settings, for windows opened from many places (e.g. the stamina window)
@@ -42,9 +42,27 @@ export function hotkeyFromEvent(e: KeyboardEvent): string | null {
     return parts.join("+");
 }
 
+// Modifier keys in the order hotkey strings list them
+const MODIFIERS = ["Ctrl", "Alt", "Shift", "Meta"];
+
+/** The modifiers of a hotkey such as "Ctrl+Shift+Enter", as "Ctrl+Shift". */
+export function modifiersOfHotkey(hotkey: string): string {
+    return hotkey.split("+").slice(0, -1).filter((part) => MODIFIERS.includes(part)).join("+");
+}
+
+/** The modifiers held during a key event, as "Ctrl+Shift". */
+export function modifiersOfEvent(e: KeyboardEvent): string {
+    return MODIFIERS.filter((_, i) => [e.ctrlKey, e.altKey, e.shiftKey, e.metaKey][i]).join("+");
+}
+
 /** The hotkey bound to an action ("" when turned off); the default before the settings are loaded. */
 export function hotkeyFor(settings: DSESettings | null, action: InitiativeHotkeyAction): string {
     return settings?.hotkeys?.[action] ?? DEFAULT_HOTKEYS[action];
+}
+
+/** The hotkey bound to an action in the current settings, for showing it in a window ("" when turned off). */
+export function currentHotkeyFor(action: InitiativeHotkeyAction): string {
+    return hotkeyFor(settingsSource?.() ?? null, action);
 }
 
 /** The action of `scope` bound to a key press, if any. */

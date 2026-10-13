@@ -71,6 +71,22 @@ export function staminaState(character: Hero | CreatureInstance, creature?: Crea
     return {current, temp, max, status, ratio, pool: false, text, title};
 }
 
+/**
+ * A living minion's share of its squad's Stamina pool, so its token shows damage like any creature's: the pool fills
+ * the living minions in order, so the last one carries the damage that hasn't killed a minion yet.
+ */
+export function minionShareState(instance: CreatureInstance, creature: Creature, group: EnemyGroup): StaminaState {
+    const max = creature.max_stamina;
+    const alive = (creature.instances ?? []).filter((inst) => !inst.isDead);
+    const pool = group.minion_stamina_pool ?? alive.length * max;
+    const share = Math.min(max, Math.max(0, pool - alive.indexOf(instance) * max));
+    return {
+        current: share, temp: 0, max, status: "healthy", ratio: max > 0 ? clamp(share / max) : 0, pool: true,
+        text: `${share}/${max}`,
+        title: share < max ? `${share}/${max}: dies next as the Squad pool drops` : `${share}/${max}`,
+    };
+}
+
 /** Puts the stamina as plain text in `el`, colored by its status. */
 export function setStaminaText(el: HTMLElement, state: StaminaState): void {
     el.setText(state.text);

@@ -156,7 +156,7 @@ and click the **×** in its corner to remove them from the party. Both edit the 
 Heroes with `max_recoveries` show a **Recoveries x/y** counter under their stamina, in the tracker and in the
 party note. Hover the counter to show **-**/**+** buttons that change the count without changing stamina.
 
-In the stamina window, **Spend Recovery** regains the hero's recovery value and uses up one Recovery
+In the stamina window, **Recovery** regains the hero's recovery value and uses up one Recovery
 (the button shows how many are left and is disabled at 0). Recoveries are only used when you apply the change.
 
 ### Enemy Groups
@@ -370,13 +370,15 @@ example back into the note's text) turns them off, so they don't get in the way 
 | `C` | Open the [conditions window](#conditions) of the selected hero or creature |
 | `Shift+C` | Remove every condition from the selected hero or creature |
 
-In the stamina window, type a number in the **Apply** field (it has focus when the window opens) and press `Enter`
-to apply it as damage, or `Shift+Enter` to apply it as healing. Either one saves and closes the window, so `D`,
-a number, and `Enter` damages the selected creature without touching the mouse.
+In the stamina window, type a number in the **Damage or heal** field (it has focus when the window opens) and press
+`Enter` to apply it as damage, or `Shift+Enter` to apply it as healing. Either one saves and closes the window, so
+`D`, a number, and `Enter` damages the selected creature without touching the mouse. `Ctrl+Enter` applies the
+window's pending changes from any field.
 
 The Stamina Pool modal of a minion squad works the same way (`Enter` deals the number to the given count of minions,
-`Shift+Enter` heals the pool by it). If the damage kills some, but not all, of the remaining minions, focus moves to
-the minion checkboxes instead: pick which ones die (Tab, Space), then press `Enter` to save.
+`Shift+Enter` heals the pool by it), with the same preview on the bar. If the damage kills some, but not all, of the
+remaining minions, focus moves to the minions instead: pick which ones die (arrow keys, Space), then press `Enter`
+to save.
 
 Change them in **Settings → Draw Steel Elements → Initiative Tracker → Keyboard Shortcuts**: click a shortcut and
 press the new key (with Ctrl, Alt, Shift, if you like; Escape cancels). The arrow resets it to its default and the

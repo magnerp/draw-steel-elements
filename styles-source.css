@@ -2065,18 +2065,9 @@ code.dsa {
 	color: var(--text-error);
 }
 
-.quick-mod-btn.disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-
 /* ==================== */
 /*     Stamina Modal    */
 /* ==================== */
-
-.stamina-header {
-	text-align: center;
-}
 
 /* Stamina Bar */
 
@@ -2118,61 +2109,6 @@ code.dsa {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-}
-
-/* Winded zone (stamina from 1 up to half of max) */
-
-.stamina-bar-winded-overlay {
-	position: absolute;
-	top: 1px;
-	height: calc(100% - 2px);
-	z-index: 1;
-	pointer-events: none;
-	background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.55) 0 1.41px, transparent 1px 6px);
-	box-shadow: 1px 0 0 0 var(--text-normal);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	overflow: hidden;
-}
-
-.stamina-bar-winded-label {
-	padding: 0 0.4em;
-	font-size: 0.7em;
-	line-height: 1.4em;
-	color: var(--text-normal);
-	background-color: var(--background-primary-alt);
-	border-radius: 10px;
-}
-
-/* Threshold summary and live status under the bar */
-
-.stamina-status-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	margin-bottom: 10px;
-	font-size: var(--font-ui-smaller);
-	color: var(--text-muted);
-}
-
-.stamina-status-badge {
-	font-weight: bold;
-	padding: 0 0.6em;
-	border-radius: 10px;
-	min-height: 1.4em;
-}
-
-.stamina-status-badge.status-winded {
-	color: black;
-	background-color: var(--stamina-bar-color-winded);
-}
-
-.stamina-status-badge.status-dying,
-.stamina-status-badge.status-dead {
-	color: white;
-	background-color: var(--stamina-bar-color-dying);
 }
 
 /* Winded / Dying tags in the initiative tracker rows */
@@ -2223,83 +2159,6 @@ code.dsa {
 	border-left: 1px solid var(--code-background);
 }
 
-/* Numeric Stamina Display */
-
-.stamina-numeric-container {
-	display: -webkit-inline-box;
-	margin-bottom: 10px;
-}
-
-.stamina-adjust-btn {
-	width: 30px;
-	height: 30px;
-	display: flex;
-	justify-content: center;
-	cursor: pointer;
-}
-
-.stamina-adjust-btn svg {
-	height: 100%;
-}
-
-.stamina-value-display {
-	width: 3em;
-	text-align: center;
-	margin: 0 5px;
-}
-
-.max-stamina-display {
-	margin-left: 5px;
-	margin-right: 5px;
-}
-
-/* Apply Damage/Healing */
-
-.modifier-container {
-	display: flex;
-	align-items: center;
-	margin-bottom: 10px;
-	justify-content: space-between;
-}
-
-.modifier-container > div {
-	width: 100%;
-	padding: 1em;
-}
-
-.vertical-divider {
-	padding: 0 !important;
-	padding-top: 8em !important;
-	width: 1px !important;
-	border-left: 1px solid var(--color-base-40);
-}
-
-.apply-row {
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-	margin-top: 0.5em;
-}
-
-.apply-input {
-	width: 60px;
-}
-
-.apply-btn,
-.quick-mod-btn {
-	display: flex;
-	width: 100%;
-	margin-top: 0.5em;
-	justify-content: start;
-}
-
-.apply-btn .btn-text,
-.quick-mod-btn .btn-text,
-.reset-button .btn-text {
-	height: 100%;
-	margin-left: 0.5em;
-}
-
 /* Temporary Stamina Container */
 
 .temp-stamina-container {
@@ -2325,290 +2184,646 @@ code.dsa {
 	width: 3em;
 }
 
-/* Action Button */
+/* Stamina window: damage, healing and temporary stamina of one hero or creature */
+.ds-stam-modal-container {
+	width: min(560px, 92vw);
+}
 
-.action-button-container {
-	text-align: center;
-	margin-top: 20px;
+.ds-stam-modal {
+	--ds-stam-healthy: var(--color-green);
+	--ds-stam-winded: var(--color-yellow);
+	--ds-stam-winded-text: var(--color-orange);
+	--ds-stam-dying: var(--color-red);
+	--ds-stam-damage: var(--color-red);
+	--ds-stam-heal: var(--color-green);
+	--ds-stam-temp: var(--color-cyan);
+	--ds-stam-surface: var(--background-secondary);
+	--ds-stam-border: var(--background-modifier-border);
+	--ds-stam-status: var(--ds-stam-healthy);
+	--ds-stam-status-text: var(--text-normal);
+}
+
+.ds-stam-modal.is-winded {
+	--ds-stam-status: var(--ds-stam-winded);
+	--ds-stam-status-text: var(--ds-stam-winded-text);
+}
+
+.ds-stam-modal.is-dying,
+.ds-stam-modal.is-dead {
+	--ds-stam-status: var(--ds-stam-dying);
+	--ds-stam-status-text: var(--ds-stam-dying);
+}
+
+.ds-stam-modal .is-hidden {
+	display: none !important;
+}
+
+.ds-stam-header {
 	display: flex;
-	justify-content: space-between;
-}
-
-button.action-button {
-	padding: 10px 20px;
-	font-size: 16px;
-	background-color: var(--interactive-accent);
-}
-
-.action-button.disabled {
-	opacity: 0.5;
-	pointer-events: none;
-	background-color: var(--interactive-normal);
-}
-
-/* ============================ */
-/*  Minion Stamina Pool Modal   */
-/* ============================ */
-
-.minion-stamina-modal .stamina-header {
-	text-align: center;
-}
-
-/* Stamina Pool Bar */
-
-.minion-stamina-modal .stamina-bar-container {
-	width: 100%;
-	background-color: var(--code-background);
-	border: 1px solid var(--text-normal);
-	border-radius: 5px;
+	align-items: baseline;
+	gap: 10px;
 	margin-bottom: 10px;
-	position: relative;
-	height: 20px;
 }
 
-.minion-stamina-modal .stamina-bar {
-	width: 100%;
-	height: 100%;
-	position: relative;
+.ds-stam-header h2 {
+	margin: 0;
+}
+
+.ds-stam-subtitle {
+	min-width: 0;
 	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	color: var(--text-muted);
 }
 
-.minion-stamina-modal .stamina-bar-fill-left {
-	position: relative;
-	height: calc(100% - 2px);
-	top: 1px;
-	left: 1px;
-	background-color: limegreen;
-	width: 0%; /* Will be updated dynamically */
-	border-radius: 3px 0 0 3px;
-	z-index: 1;
+/* Summary: numbers and bar */
+
+.ds-stam-summary {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px 14px;
+	background-color: var(--ds-stam-surface);
+	border: 1px solid var(--ds-stam-border);
+	border-radius: 10px;
 }
 
-.minion-stamina-modal .stamina-bar-fill-right {
-	position: relative;
-	height: calc(100% - 2px);
-	top: 1px;
-	background-color: deepskyblue;
-	width: 0%; /* Will be updated dynamically */
-	border-radius: 0 3px 3px 0;
-	z-index: 2;
+.ds-stam-values {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0 6px;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
 }
 
-.minion-stamina-modal .stamina-bar-tick {
-	position: absolute;
-	bottom: 0;
-	height: 50%;
-	width: 2px;
-	background-color: var(--code-background);
-	border-right: 1px solid var(--text-normal);
-	z-index: 3;
-}
-
-.minion-stamina-modal .stamina-bar-tick::after {
+.ds-stam-before,
+.ds-stam-arrow {
 	display: none;
-}
-
-/* Stamina Modifiers */
-
-.minion-stamina-modal .stamina-mod-container {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	margin-bottom: 10px;
-}
-
-.minion-stamina-modal .stamina-mod-container .stamina-adjust-btn {
-	width: 30px;
-	height: 30px;
-	display: flex;
-	justify-content: center;
-	cursor: pointer;
-}
-
-.minion-stamina-modal .stamina-mod-container .stamina-adjust-btn svg {
-	height: 100%;
-}
-
-.minion-stamina-modal .stamina-mod-container .stamina-value-display {
-	width: 4em;
-	text-align: center;
-	margin: 0 5px;
-}
-
-.minion-stamina-modal .stamina-mod-container .max-stamina-display {
-	margin-left: 5px;
-	margin-right: 5px;
-}
-
-/* Apply Damage Section */
-
-.minion-stamina-modal .apply-container {
-	margin-bottom: 10px;
-}
-
-.minion-stamina-modal .apply-row {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	margin-top: 0.5em;
-}
-
-.minion-stamina-modal .apply-row span {
-	margin: 0 5px;
-	text-align: center;
-}
-
-.minion-stamina-modal .apply-row input {
-	width: 3em;
-}
-
-.minion-stamina-modal .apply-input {
-	width: 60px;
-}
-
-/* Apply Damage Button */
-
-.minion-stamina-modal .apply-btn {
-	display: flex;
-	width: 100%;
-	margin-top: 0.5em;
-	justify-content: center;
-	max-width: fit-content;
-}
-
-.minion-stamina-modal .apply-btn .btn-icon {
-	margin-right: 0.5em;
-	width: 1em;
-	height: 1em;
-}
-
-.minion-stamina-modal .apply-btn .btn-text {
-	line-height: 24px;
-}
-
-/* Info Text */
-
-.minion-stamina-modal .info-text {
-	text-align: center;
-	font-size: var(--font-ui-large);
-	margin: 1em 0;
-	white-space: pre-line;
-}
-
-/* Minion List */
-
-.minion-stamina-modal .minion-list-container {
-	max-height: 200px;
-	overflow-y: auto;
-	margin-bottom: 10px;
-	border-radius: 5px;
-}
-
-.minion-stamina-modal .minion-row {
-	display: inline-flex;
-	align-items: center;
-	padding: 0.25em 0;
-	justify-items: center;
-	justify-content: start;
-	width: 50%;
-}
-
-.minion-stamina-modal .minion-row:hover {
-	background-color: var(--code-background);
-}
-
-.minion-stamina-modal .minion-checkbox {
-	margin-right: 10px;
-}
-
-.minion-stamina-modal .minion-checkbox[disabled] + span {
+	font-size: 1.1em;
 	color: var(--text-faint);
 }
 
-.minion-stamina-modal .minion-checkbox:checked + span {
-	color: crimson;
+.ds-stam-modal.has-change .ds-stam-before,
+.ds-stam-modal.has-change .ds-stam-arrow {
+	display: inline;
 }
 
-.minion-stamina-modal .minion-name {
-	margin-right: 10px;
-	flex-grow: 1;
+.ds-stam-modal.has-change .ds-stam-before {
+	text-decoration: line-through;
 }
 
-.minion-stamina-modal .minion-conditions {
-	display: flex;
-	align-items: center;
+.ds-stam-after {
+	font-size: 1.9em;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--ds-stam-status-text);
 }
 
-/* Condition Icons */
-
-.minion-stamina-modal .condition-icon {
-	width: 20px;
-	height: 20px;
-	margin-right: 5px;
-	cursor: pointer;
+.ds-stam-max {
+	margin-left: -4px;
+	color: var(--text-muted);
 }
 
-.minion-stamina-modal .condition-icon svg {
-	width: 100%;
-	height: 100%;
+.ds-stam-temp {
+	font-weight: 700;
+	color: var(--ds-stam-temp);
 }
 
-/* Add Condition Icon */
-
-.minion-stamina-modal .add-condition-icon {
-	width: 20px;
-	height: 20px;
-	cursor: pointer;
+.ds-stam-status-tag {
+	align-self: center;
+	padding: 0 6px;
+	border-radius: 6px;
+	font-size: 10px;
+	font-weight: 800;
+	line-height: 1.7;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ds-stam-status-text);
+	background-color: color-mix(in srgb, var(--ds-stam-status) 20%, transparent);
 }
 
-.minion-stamina-modal .add-condition-icon svg {
-	width: 100%;
-	height: 100%;
+.ds-stam-delta {
+	margin-left: auto;
+	font-size: 1.2em;
+	font-weight: 700;
 }
 
-/* Action Button */
-
-.minion-stamina-modal .action-button-container {
-	text-align: center;
-	margin-top: 20px;
-	display: flex;
-	justify-content: space-between;
+.ds-stam-modal.is-damage .ds-stam-delta {
+	color: var(--ds-stam-damage);
 }
 
-.minion-stamina-modal button.action-button {
-	padding: 10px 20px;
-	font-size: 16px;
-	background-color: var(--interactive-accent);
+.ds-stam-modal.is-heal .ds-stam-delta {
+	color: var(--ds-stam-heal);
 }
 
-.minion-stamina-modal .action-button.disabled {
-	opacity: 0.5;
+.ds-stam-meter {
+	position: relative;
+	height: 10px;
+	overflow: hidden;
+	border-radius: 5px;
+	background-color: var(--background-modifier-border);
+}
+
+.ds-stam-zone,
+.ds-stam-meter-fill,
+.ds-stam-meter-change {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	transition: width 0.2s, left 0.2s;
+}
+
+.ds-stam-meter-fill {
+	left: 0;
+	background-color: var(--ds-stam-status);
+}
+
+.ds-stam-meter-change {
+	z-index: 1;
+}
+
+.ds-stam-meter-change.is-damage {
+	background: repeating-linear-gradient(135deg,
+		var(--ds-stam-damage) 0 3px, color-mix(in srgb, var(--ds-stam-damage) 45%, transparent) 3px 6px);
+}
+
+.ds-stam-meter-change.is-heal {
+	background-color: color-mix(in srgb, var(--ds-stam-heal) 55%, transparent);
+}
+
+/* What hovering Damage/Heal (or typing the amount) would do: pulses on top of the pending change */
+.ds-stam-meter-change.is-preview {
+	z-index: 2;
+	animation: ds-stam-preview 1.1s ease-in-out infinite alternate;
+}
+
+.ds-stam-meter-change.is-preview.is-heal {
+	background: repeating-linear-gradient(135deg,
+		var(--ds-stam-heal) 0 3px, color-mix(in srgb, var(--ds-stam-heal) 45%, transparent) 3px 6px);
+}
+
+@keyframes ds-stam-preview {
+	from { opacity: 1; }
+	to { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ds-stam-meter-change.is-preview {
+		animation: none;
+		opacity: 0.75;
+	}
+}
+
+.ds-stam-modal.is-previewing .ds-stam-after,
+.ds-stam-modal.is-previewing .ds-stam-delta {
+	opacity: 0.8;
+	text-decoration: underline dotted;
+	text-underline-offset: 4px;
+}
+
+/* Zones on the bar: dying (heroes, below 0) and winded, shaded over the fill with an edge where they end */
+.ds-stam-zone {
+	z-index: 3;
 	pointer-events: none;
-	background-color: var(--interactive-normal);
+	box-shadow: inset -2px 0 0 0 var(--ds-stam-zone-edge);
 }
 
-.minion-stamina-modal .warning-icon {
-	flex-grow: 1;
+.ds-stam-zone.is-winded {
+	--ds-stam-zone-edge: var(--ds-stam-winded);
+	background: repeating-linear-gradient(135deg,
+		color-mix(in srgb, var(--ds-stam-winded) 45%, transparent) 0 2px, transparent 2px 6px);
+}
+
+.ds-stam-zone.is-dying {
+	--ds-stam-zone-edge: var(--ds-stam-dying);
+	background: repeating-linear-gradient(135deg,
+		color-mix(in srgb, var(--ds-stam-dying) 40%, transparent) 0 2px, transparent 2px 6px);
+}
+
+/* Their labels under the bar */
+.ds-stam-zones {
+	position: relative;
+	height: 18px;
+	margin-top: -4px;
+}
+
+.ds-stam-zone-label {
+	position: absolute;
+	top: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	font-size: 10px;
+	font-weight: 800;
+	line-height: 1;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	font-variant-numeric: tabular-nums;
+	padding-top: 4px;
+	text-align: center;
+	border-top: 2px solid var(--ds-stam-zone-edge);
+}
+
+.ds-stam-zone-label.is-winded {
+	--ds-stam-zone-edge: var(--ds-stam-winded);
+	color: var(--ds-stam-winded-text);
+	background: linear-gradient(color-mix(in srgb, var(--ds-stam-winded) 14%, transparent), transparent);
+}
+
+.ds-stam-zone-label.is-dying {
+	--ds-stam-zone-edge: var(--ds-stam-dying);
+	color: var(--ds-stam-dying);
+	background: linear-gradient(color-mix(in srgb, var(--ds-stam-dying) 14%, transparent), transparent);
+}
+
+/* Sections */
+
+.ds-stam-label {
+	margin: 16px 2px 6px;
+	font-size: var(--font-ui-smaller);
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-faint);
+}
+
+.ds-stam-amount-row,
+.ds-stam-set-row,
+.ds-stam-quick-row {
 	display: flex;
-	justify-content: flex-end;
-	align-items: center;
-	color: orange;
-	margin-right: 1em;
+	flex-wrap: wrap;
+	gap: 8px;
 }
 
-/* Reset Button */
+.ds-stam-modal input[type="number"] {
+	font-variant-numeric: tabular-nums;
+	text-align: center;
+}
 
-.minion-stamina-modal .reset-button {
+.ds-stam-modal .ds-stam-amount {
+	width: 90px;
+	height: 42px;
+	font-size: 1.3em;
+	font-weight: 700;
+}
+
+.ds-stam-modal .ds-stam-action {
+	flex: 1 1 140px;
 	display: flex;
 	align-items: center;
+	gap: 8px;
+	height: 42px;
+	padding: 0 12px;
+	font-weight: 600;
+	border: 1px solid var(--ds-stam-action);
+	border-radius: 8px;
+	box-shadow: none;
+	color: var(--ds-stam-action);
+	background-color: color-mix(in srgb, var(--ds-stam-action) 12%, var(--background-primary));
+	cursor: pointer;
+	transition: background-color 0.1s;
 }
 
-.minion-stamina-modal .reset-button .btn-icon {
-	margin-right: 0.5em;
+.ds-stam-modal .ds-stam-action:hover {
+	background-color: color-mix(in srgb, var(--ds-stam-action) 22%, var(--background-primary));
 }
 
-.minion-stamina-modal .reset-button .btn-text {
-	line-height: 24px;
+.ds-stam-action.is-damage {
+	--ds-stam-action: var(--ds-stam-damage);
+}
+
+.ds-stam-action.is-heal {
+	--ds-stam-action: var(--ds-stam-heal);
+}
+
+.ds-stam-action-icon,
+.ds-stam-quick-icon {
+	display: flex;
+}
+
+.ds-stam-action-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.ds-stam-action kbd {
+	margin-left: auto;
+	font-size: 0.75em;
+	font-weight: 500;
+	color: var(--text-muted);
+}
+
+/* Steppers: stamina and temporary stamina */
+
+.ds-stam-stepper {
+	flex: 1 1 200px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 6px 6px 6px 12px;
+	background-color: var(--ds-stam-surface);
+	border: 1px solid var(--ds-stam-border);
+	border-radius: 8px;
+}
+
+.ds-stam-stepper-label {
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.ds-stam-stepper.is-temp .ds-stam-stepper-label {
+	color: var(--ds-stam-temp);
+}
+
+.ds-stam-stepper-body {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.ds-stam-modal .ds-stam-stepper-input {
+	width: 4em;
+	font-weight: 700;
+}
+
+.ds-stam-stepper-suffix {
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-stam-modal .ds-stam-step {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: 6px;
+	box-shadow: none;
+	color: var(--text-muted);
+	background: transparent;
+	cursor: pointer;
+}
+
+.ds-stam-modal .ds-stam-step:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-stam-step svg {
+	width: 16px;
+	height: 16px;
+}
+
+/* One-click changes */
+
+.ds-stam-quick-row {
+	margin-top: 8px;
+}
+
+.ds-stam-modal .ds-stam-quick {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 10px;
+	font-size: var(--font-ui-small);
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+.ds-stam-modal .ds-stam-quick:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+.ds-stam-quick-icon svg {
+	width: 15px;
+	height: 15px;
+}
+
+/* Footer */
+
+.ds-stam-footer {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 14px;
+	margin-top: 16px;
+	padding-top: 12px;
+	border-top: 1px solid var(--ds-stam-border);
+}
+
+.ds-stam-hints {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	flex: 1 1 100%;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+}
+
+.ds-stam-hints kbd {
+	font-size: 0.9em;
+}
+
+.ds-stam-changes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	font-size: var(--font-ui-small);
+	font-weight: 700;
+	color: var(--text-muted);
+}
+
+.ds-stam-changes .is-damage {
+	color: var(--ds-stam-damage);
+}
+
+.ds-stam-changes .is-heal {
+	color: var(--ds-stam-heal);
+}
+
+.ds-stam-changes .is-temp {
+	color: var(--ds-stam-temp);
+}
+
+.ds-stam-buttons {
+	display: flex;
+	gap: 8px;
+	margin-left: auto;
+}
+
+.ds-stam-buttons button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* Stamina pool window of a minion squad (builds on the stamina window's styles) */
+
+.ds-pool-modal .ds-pool-kills {
+	color: var(--ds-stam-damage);
+	background-color: color-mix(in srgb, var(--ds-stam-damage) 18%, transparent);
+}
+
+/* Where each minion dies */
+.ds-pool-tick {
+	position: absolute;
+	z-index: 3;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	margin-left: -1px;
+	background-color: var(--ds-stam-surface);
+}
+
+.ds-pool-left {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+
+.ds-pool-count {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-muted);
+}
+
+.ds-pool-modal .ds-pool-count input {
+	width: 3.5em;
+	height: 42px;
+	font-weight: 700;
+}
+
+/* Minions, picked to die */
+
+.ds-pool-minions-label {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+.ds-pool-pick-info {
+	letter-spacing: 0.04em;
+}
+
+.ds-pool-pick-info.is-picking {
+	color: var(--ds-stam-damage);
+}
+
+.ds-pool-pick-info.is-done {
+	color: var(--text-muted);
+}
+
+.ds-pool-minions {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 6px;
+	max-height: 220px;
+	overflow-y: auto;
+	padding: 2px;
+}
+
+.ds-pool-minion {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-height: 36px;
+	padding: 6px 10px;
+	background-color: var(--ds-stam-surface);
+	border: 1px solid var(--ds-stam-border);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: background-color 0.1s, border-color 0.1s, opacity 0.1s;
+}
+
+.ds-pool-minion:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-pool-minion:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+}
+
+.ds-pool-minion.is-disabled:not(.is-picked) {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.ds-pool-minion.is-picked {
+	border-color: var(--ds-stam-damage);
+	border-style: dashed;
+	background-color: color-mix(in srgb, var(--ds-stam-damage) 12%, var(--ds-stam-surface));
+}
+
+.ds-pool-minion-mark {
+	display: flex;
+	flex: none;
+	color: var(--text-faint);
+	opacity: 0.35;
+}
+
+.ds-pool-minion.is-picked .ds-pool-minion-mark {
+	color: var(--ds-stam-damage);
+	opacity: 1;
+}
+
+.ds-pool-minion-mark svg {
+	width: 16px;
+	height: 16px;
+}
+
+.ds-pool-minion-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.ds-pool-minion.is-picked .ds-pool-minion-name {
+	text-decoration: line-through;
+	color: var(--text-muted);
+}
+
+.ds-pool-minion-conditions {
+	display: flex;
+	flex: none;
+	gap: 2px;
+}
+
+.ds-pool-condition {
+	display: flex;
+	padding: 2px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.ds-pool-condition:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.ds-pool-condition svg {
+	width: 15px;
+	height: 15px;
+}
+
+/* Healing a squad: shown, but minions usually can't regain Stamina */
+.ds-pool-warning {
+	display: flex;
+	align-items: center;
+	color: var(--color-orange);
+}
+
+.ds-pool-warning svg {
+	width: 15px;
+	height: 15px;
 }
 
 /* ===================== */
@@ -2808,14 +3023,6 @@ button.action-button {
 	display: flex;
 	gap: 8px;
 	margin-left: auto;
-}
-
-/* Divider (minion stamina pool modal) */
-.horizontal-divider {
-	width: 100%;
-	margin: 1em 0;
-	height: 1px;
-	background-color: var(--color-base-40);
 }
 
 /* Modal Buttons */
