@@ -2,6 +2,7 @@ import {App, parseYaml, stringifyYaml, TFile} from "obsidian";
 import {DSESettings} from "@model/Settings";
 import {ReferenceResolver} from "@utils/ReferenceResolver";
 import {EncounterData, Hero, initHero, normalizeConditions, normalizeLinkRef} from "@drawSteelAdmonition/EncounterData";
+import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
 
 export interface PartyData {
     name?: string;
@@ -83,9 +84,15 @@ export class PartyStore {
      * party note. Only those fields are touched; the rest of the party definition is left as written.
      */
     static async saveHeroes(app: App, file: TFile, heroes: Hero[]): Promise<void> {
+        // Heroes linked to a ds-hero note keep their stamina and recoveries there
+        for (const hero of heroes.filter((h) => h.sheet_path)) {
+            await HeroSheetStore.saveHero(app, hero);
+        }
+        const partyHeroes = heroes.filter((h) => !h.sheet_path);
+        if (partyHeroes.length === 0) return;
         await PartyStore.editBlock(app, file, (rawHeroes) => {
             let changed = false;
-            heroes.forEach((hero) => {
+            partyHeroes.forEach((hero) => {
                 const rawHero = rawHeroes.find((entry) => partyHeroKey(entry) === hero.party_key);
                 if (!rawHero) {
                     console.warn(`Draw Steel Elements: hero '${hero.name}' not found in ${file.path}. Change NOT saved.`);

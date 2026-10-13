@@ -1,4 +1,4 @@
-import {App, MarkdownPostProcessorContext, Modal, Notice, setIcon, TFile} from "obsidian";
+import {App, MarkdownPostProcessorContext, MarkdownRenderChild, Modal, Notice, setIcon, TFile} from "obsidian";
 import {Hero, initHero} from "@drawSteelAdmonition/EncounterData";
 import {parsePartyData, PartyData, PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
@@ -9,6 +9,7 @@ import {ReferenceResolver} from "@utils/ReferenceResolver";
 import {StaminaBar} from "@model/StaminaBar";
 import {Images} from "@utils/Images";
 import {Stamina} from "@utils/Stamina";
+import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
 import DrawSteelAdmonitionPlugin from "main";
 
 /**
@@ -31,6 +32,7 @@ export class PartyProcessor {
         try {
             const data = await parsePartyData(source, this.app, this.plugin.settings);
             this.buildUI(container, data, ctx);
+            this.watchHeroSheets(container, data, ctx);
             // Avoid clicks in reading mode from opening edit view
             const stop = (e: Event) => {
                 e.preventDefault();
@@ -45,6 +47,25 @@ export class PartyProcessor {
             userMessage += error.message;
             container.createEl("div", {text: userMessage, cls: "error-message ds-container"});
         }
+    }
+
+    /** Re-renders the party when a hero's ds-hero note changes (e.g. from the hero sheet or an encounter). */
+    private watchHeroSheets(container: HTMLElement, data: PartyData, ctx: MarkdownPostProcessorContext): void {
+        const child = new MarkdownRenderChild(container);
+        child.registerEvent(this.app.vault.on("modify", async (file) => {
+            const linked = data.heroes.filter((hero) => hero.sheet_path === file.path);
+            if (linked.length === 0) return;
+            try {
+                for (const hero of linked) {
+                    await HeroSheetStore.reloadHero(this.app, hero);
+                }
+                container.empty();
+                this.buildUI(container, data, ctx);
+            } catch (e) {
+                console.warn("Draw Steel Elements: failed to refresh party heroes.", e);
+            }
+        }));
+        ctx.addChild(child);
     }
 
     /** The note this party block is in, or null (with a notice) if it can't be saved to. */

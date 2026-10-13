@@ -28,6 +28,12 @@ The [Initiative Tracker Element](initiative-tracker.md) is used to manage and ru
 
 ![Initiative Tracker.png](Media/initiative-tracker.png)
 
+### Hero Element
+
+The [Hero Element](hero.md) is an interactive hero sheet: stats, abilities, kit, and free strikes, with Stamina,
+Recoveries, Heroic Resource, Surges, and Victories you can change during play. Parties and Initiative Trackers can
+link to it to share the hero's Stamina and Recoveries.
+
 ### Negotiation Tracker Element
 
 The [Negotiation Tracker Element](negotiation-tracker.md) is used to manage and run negotiations.

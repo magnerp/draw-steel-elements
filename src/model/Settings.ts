@@ -5,6 +5,12 @@ export interface DSESettings {
 	compendiumDestinationDirectory: string;
 	defaultImagePath: string;
 	conditionStyles?: Record<string, ConditionStyle>; // Last color/effect picked per condition key
+	initiativeLayout?: InitiativeLayout; // Last sizes the initiative tracker was dragged to
+}
+
+export interface InitiativeLayout {
+	trackerRatio?: number; // Share of the width taken by the tracker (the creature view gets the rest)
+	height?: number; // Height in px of the tracker and creature view
 }
 
 export const DEFAULT_SETTINGS: DSESettings = {

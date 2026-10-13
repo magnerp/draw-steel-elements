@@ -2,7 +2,7 @@ import {App, parseYaml, TFile} from "obsidian";
 import {DSESettings} from "@model/Settings";
 
 export class ReferenceResolver {
-    private app: App;
+    readonly app: App;
     private settings: DSESettings;
 
     constructor(app: App, settings: DSESettings) {
@@ -12,14 +12,7 @@ export class ReferenceResolver {
 
     public async resolveReferences(data: any): Promise<any> {
         if (typeof data === 'string') {
-            if (data.startsWith('@')) {
-                return await this.resolvePath(data.substring(1));
-            } else if (data.startsWith('[[') && data.endsWith(']]')) {
-                // Drop an alias ([[Note|Alias]]) or heading ([[Note#Heading]])
-                const link = data.substring(2, data.length - 2).split('|')[0].split('#')[0].trim();
-                return await this.resolvePath(link);
-            }
-            return await this.resolvePath(data);
+            return await this.resolvePath(ReferenceResolver.referencePath(data));
         }
 
         if (Array.isArray(data)) {
@@ -35,6 +28,22 @@ export class ReferenceResolver {
         }
 
         return data;
+    }
+
+    /** The vault path a string reference points at: `@path`, `[[Note]]` (alias/heading dropped), or a plain path. */
+    public static referencePath(ref: string): string {
+        if (ref.startsWith('@')) {
+            return ref.substring(1);
+        } else if (ref.startsWith('[[') && ref.endsWith(']]')) {
+            // Drop an alias ([[Note|Alias]]) or heading ([[Note#Heading]])
+            return ref.substring(2, ref.length - 2).split('|')[0].split('#')[0].trim();
+        }
+        return ref;
+    }
+
+    /** The note a string reference points at, or null if it can't be found. */
+    public resolveFile(ref: string): TFile | null {
+        return this.findFile(ReferenceResolver.referencePath(ref));
     }
 
     public async resolvePath(path: string): Promise<any> {

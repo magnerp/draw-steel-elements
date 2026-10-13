@@ -1,6 +1,7 @@
 import {App, parseYaml} from "obsidian";
 import {DSESettings} from "@model/Settings";
 import {ReferenceResolver} from "@utils/ReferenceResolver";
+import {isHeroSheet, loadHeroSheet} from "@drawSteelAdmonition/hero/HeroSheet";
 
 export interface Hero {
     name: string;
@@ -18,6 +19,8 @@ export interface Hero {
     // Runtime only (never serialized): set for heroes loaded from a ds-party note
     from_party?: boolean;
     party_key?: string;
+    // Runtime only: path of the ds-hero note this hero links to, which holds their stamina and recoveries
+    sheet_path?: string;
 }
 
 // Per-encounter state for party heroes. Stamina and recoveries live in the party note instead.
@@ -137,7 +140,9 @@ export async function initHero(hero: Hero, index: number, resolver: ReferenceRes
     if (typeof hero.statblock === 'string') {
         try {
             const resolved = await resolver.resolveReferences(hero.statblock);
-            if (resolved) {
+            if (resolved && isHeroSheet(resolved)) {
+                await applyHeroSheet(hero, resolved, resolver.resolveFile(hero.statblock)?.path, resolver);
+            } else if (resolved) {
                 if (!hero.name && resolved.name) hero.name = resolved.name;
                 if (!hero.max_stamina && resolved.stamina) hero.max_stamina = +resolved.stamina;
                 if (!hero.image && resolved.image) hero.image = resolved.image;
@@ -178,6 +183,27 @@ Are there multiple instances of the '${hero.statblock}' file in your vault? If s
 }
 
 /**
+ * Fills a hero from the ds-hero note they link to. Fields set on the hero itself win for the definition
+ * (name, stamina, recoveries, image), but the current stamina and recoveries always come from the sheet,
+ * which is where they're saved.
+ */
+async function applyHeroSheet(hero: Hero, raw: any, sheetPath: string | undefined, resolver: ReferenceResolver): Promise<void> {
+    const sheet = await loadHeroSheet(resolver.app, resolver, structuredClone(raw));
+    if (!hero.name) hero.name = sheet.name;
+    if (!hero.max_stamina) hero.max_stamina = sheet.max_stamina;
+    if (!hero.image && sheet.image) hero.image = sheet.image;
+    if (hero.max_recoveries == null && sheet.max_recoveries != null) hero.max_recoveries = sheet.max_recoveries;
+    if (hero.recovery_value == null && sheet.recovery_value != null) hero.recovery_value = sheet.recovery_value;
+    if (!sheetPath) return;
+    hero.sheet_path = sheetPath;
+    hero.current_stamina = sheet.current_stamina;
+    hero.temp_stamina = sheet.temp_stamina;
+    if (hero.max_recoveries != null) {
+        hero.current_recoveries = sheet.current_recoveries ?? hero.max_recoveries;
+    }
+}
+
+/**
  * Builds the object written back to the ds-initiative code block. Party heroes are left out of
  * `heroes`; only their per-encounter state (turn, conditions) is kept, under `party_state`.
  */
@@ -187,7 +213,13 @@ export function serializeEncounter(data: EncounterData): any {
         out.party = data.party;
     }
     out.heroes = data.heroes.filter((hero) => !hero.from_party).map((hero) => {
-        const {from_party, party_key, ...rest} = hero;
+        const {from_party, party_key, sheet_path, ...rest} = hero;
+        if (sheet_path) {
+            // Saved in the hero's ds-hero note instead
+            delete rest.current_stamina;
+            delete rest.temp_stamina;
+            delete rest.current_recoveries;
+        }
         return rest;
     });
     if (data.party) {

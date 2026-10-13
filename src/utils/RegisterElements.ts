@@ -2,6 +2,7 @@ import DrawSteelAdmonitionPlugin from "main";
 
 import {InitiativeProcessor} from "@drawSteelAdmonition/initiativeProcessor";
 import {PartyProcessor} from "@drawSteelAdmonition/party/PartyProcessor";
+import {HeroProcessor} from "@drawSteelAdmonition/hero/HeroProcessor";
 import {NegotiationTrackerProcessor} from "@drawSteelAdmonition/negotiation/NegotiationTrackerProcessor";
 import {StatblockProcessor} from "@drawSteelAdmonition/statblock/StatblockProcessor";
 import { FeatureProcessor } from "@drawSteelAdmonition/Features/FeatureProcessor";
@@ -46,6 +47,9 @@ export function registerElements (plugin: DrawSteelAdmonitionPlugin) {
 
 	const partyProcessor = new PartyProcessor(plugin);
 	plugin.registerMarkdownCodeBlockProcessor("ds-party", partyProcessor.handler);
+
+	const heroProcessor = new HeroProcessor(plugin);
+	plugin.registerMarkdownCodeBlockProcessor("ds-hero", heroProcessor.handler);
 
 	let ntProcessor = new NegotiationTrackerProcessor(plugin.app);
 	plugin.registerMarkdownCodeBlockProcessor("ds-nt", ntProcessor.handler);
