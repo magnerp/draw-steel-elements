@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Initiative tracker: **keyboard shortcuts**, set in the plugin settings. Click a tracker, then press `D` to open
+  the selected creature's stamina window, `K` to kill it, `↓`/`↑` to select the next/previous hero or creature in
+  the same group, `→`/`←` to jump to the next/previous group (heroes, then each enemy group), and `R` to reset the
+  round.
+- Stamina window: type a number in the **Apply** field and press `Enter` to apply it as damage or `Shift+Enter`
+  as healing, saving and closing the window. Both keys can be changed in the plugin settings. In a minion squad's
+  Stamina Pool modal, when the damage kills some minions, `Enter` moves to the minion checkboxes and saves once
+  they're picked.
 - New **Hero** element (`ds-hero`): an interactive hero sheet with stats, characteristics, and abilities, plus
   Stamina (stamina window, Spend Recovery), Recoveries, Heroic Resource, Surges, and Victories counters and a
   **Respite** button. Changes are saved back to the block, rewriting only the changed lines.

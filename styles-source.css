@@ -2725,3 +2725,15 @@ Post Vue Globals
 	font-weight: bold;
 	margin-top: 0.5em;
 }
+
+/* Initiative tracker that receives the keyboard shortcuts (the last one clicked) */
+.ds-init-container.is-hotkeys-active {
+	outline: 1px solid var(--interactive-accent);
+	outline-offset: 2px;
+	border-radius: var(--radius-s);
+}
+
+button.ds-hotkey-recording {
+	color: var(--text-on-accent);
+	background-color: var(--interactive-accent);
+}

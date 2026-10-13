@@ -25,6 +25,8 @@ import {PartyStore} from "@drawSteelAdmonition/party/PartyData";
 import {buildRecoveryControl} from "@drawSteelAdmonition/party/RecoveryControl";
 import {CreatureView, StatblockCache, ViewedCreature} from "@drawSteelAdmonition/initiative/CreatureView";
 import {HeroSheetStore} from "@drawSteelAdmonition/hero/HeroSheet";
+import {HotkeyTarget} from "@drawSteelAdmonition/initiative/TrackerHotkeys";
+import {InitiativeHotkeyAction} from "@model/Settings";
 import DrawSteelAdmonitionPlugin from "main";
 
 /** Which hero or creature instance the creature view shows. */
@@ -54,7 +56,7 @@ export interface TrackerServices {
  * One rendered ds-initiative block: the tracker (heroes, enemy groups, malice) on one side and the
  * creature view with the selected hero's or creature's stats and abilities on the other.
  */
-export class InitiativeTracker {
+export class InitiativeTracker implements HotkeyTarget {
     private app: App;
     private plugin: DrawSteelAdmonitionPlugin;
     private conditionManager: ConditionManager;
@@ -64,7 +66,7 @@ export class InitiativeTracker {
 
     constructor(
         services: TrackerServices,
-        private root: HTMLElement,
+        readonly root: HTMLElement,
         private data: EncounterData,
         private ctx: MarkdownPostProcessorContext,
     ) {
@@ -98,6 +100,10 @@ export class InitiativeTracker {
 
     public get encounter(): EncounterData {
         return this.data;
+    }
+
+    public get sourcePath(): string {
+        return this.ctx.sourcePath;
     }
 
     public render(): void {
@@ -373,6 +379,131 @@ export class InitiativeTracker {
     }
 
     // ---------------------------------------------------------------------------------------------
+    // Keyboard shortcuts
+    // ---------------------------------------------------------------------------------------------
+
+    /** Outlines the tracker while the keyboard shortcuts go to it. */
+    public setHotkeysActive(active: boolean): void {
+        this.root.toggleClass("is-hotkeys-active", active);
+    }
+
+    public runHotkey(action: InitiativeHotkeyAction): void {
+        switch (action) {
+            case "editStamina":
+            case "kill": {
+                const viewed = this.viewed();
+                if (!viewed) {
+                    new Notice("Select a hero or creature first.");
+                } else if (action === "editStamina") {
+                    this.openViewStaminaModal(viewed);
+                } else if (viewed.kind === "hero") {
+                    new Notice("Only creatures can be killed with the shortcut.");
+                } else if (this.killCreatureInstance(viewed.group, viewed.creature, viewed.instance)) {
+                    this.render();
+                    this.save();
+                }
+                break;
+            }
+            case "selectNext":
+                this.selectSibling(1);
+                break;
+            case "selectPrevious":
+                this.selectSibling(-1);
+                break;
+            case "nextGroup":
+                this.selectGroup(1);
+                break;
+            case "previousGroup":
+                this.selectGroup(-1);
+                break;
+            case "resetRound":
+                this.resetRound();
+                break;
+        }
+    }
+
+    /**
+     * Selects the next (`step` 1) or previous (-1) hero, or creature in the selected creature's group,
+     * wrapping around at the ends.
+     */
+    private selectSibling(step: number): void {
+        const selection = selections.get(this.ctx.sourcePath);
+        if (!selection || !this.viewed()) {
+            new Notice("Select a hero or creature first.");
+            return;
+        }
+        if (selection.kind === "hero") {
+            const heroes = this.data.heroes;
+            const index = heroes.findIndex((h) => h.name === selection.name);
+            this.selectHero(heroes[(index + step + heroes.length) % heroes.length]);
+        } else {
+            const group = this.data.enemy_groups[selection.groupIndex];
+            const keys = group.creatures.flatMap((creature, creatureIndex) =>
+                (creature.instances ?? []).map((instance) => `${creatureIndex}-${instance.id}`)
+            );
+            const index = keys.indexOf(selection.instanceKey);
+            const instanceKey = keys[(index + step + keys.length) % keys.length];
+            // The group's detail row follows the selection, as when clicking a cell
+            group.selectedInstanceKey = instanceKey;
+            selections.set(this.ctx.sourcePath, {kind: "creature", groupIndex: selection.groupIndex, instanceKey});
+            viewScroll.delete(this.ctx.sourcePath);
+            this.render();
+            this.save();
+        }
+        this.scrollToSelection();
+    }
+
+    /**
+     * Moves the selection to the next (`step` 1) or previous (-1) group, wrapping around: the heroes come first,
+     * then each enemy group. An enemy group selects the creature in its detail row, as clicking the group does;
+     * the heroes select the first hero.
+     */
+    private selectGroup(step: number): void {
+        // -1 stands for the heroes
+        const groups: number[] = [];
+        if (this.data.heroes.length > 0) groups.push(-1);
+        this.data.enemy_groups.forEach((group, index) => {
+            if (this.shownInstance(group)) groups.push(index);
+        });
+        if (groups.length === 0) return;
+
+        const selection = this.viewed() ? selections.get(this.ctx.sourcePath) : undefined;
+        const current = selection ? groups.indexOf(selection.kind === "hero" ? -1 : selection.groupIndex) : -1;
+        // With nothing selected, go to the first (or, backwards, the last) group
+        const target = current === -1
+            ? (step > 0 ? groups[0] : groups[groups.length - 1])
+            : groups[(current + step + groups.length) % groups.length];
+
+        if (target === -1) {
+            this.selectHero(this.data.heroes[0]);
+        } else {
+            const group = this.data.enemy_groups[target];
+            const shown = this.shownInstance(group)!;
+            this.selectCreature(group, `${group.creatures.indexOf(shown.creature)}-${shown.instance.id}`);
+        }
+        this.scrollToSelection();
+    }
+
+    /** Scrolls the tracker so the selected row or cell is visible, and remembers it for the next render. */
+    private scrollToSelection(): void {
+        const selected = this.trackerEl.querySelector(".creature-instance-cell.is-viewed")
+            ?? this.trackerEl.querySelector(".is-viewed");
+        selected?.scrollIntoView({block: "nearest"});
+        trackerScroll.set(this.ctx.sourcePath, this.trackerEl.scrollTop);
+    }
+
+    private resetRound(): void {
+        this.data.heroes.forEach((hero) => {
+            hero.has_taken_turn = false;
+        });
+        this.data.enemy_groups.forEach((group) => {
+            group.has_taken_turn = false;
+        });
+        this.render();
+        this.save();
+    }
+
+    // ---------------------------------------------------------------------------------------------
     // Tracker
     // ---------------------------------------------------------------------------------------------
 
@@ -385,16 +516,7 @@ export class InitiativeTracker {
             text: "Reset Round",
             cls: "reset-round-button",
         });
-        resetRoundButton.addEventListener("click", () => {
-            data.heroes.forEach((hero) => {
-                hero.has_taken_turn = false;
-            });
-            data.enemy_groups.forEach((group) => {
-                group.has_taken_turn = false;
-            });
-            this.render();
-            this.save();
-        });
+        resetRoundButton.addEventListener("click", () => this.resetRound());
 
         // Reset Encounter Button
         const resetEncounterButton = topActionBar.createEl("button", {

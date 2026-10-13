@@ -6,7 +6,23 @@ export interface DSESettings {
 	defaultImagePath: string;
 	conditionStyles?: Record<string, ConditionStyle>; // Last color/effect picked per condition key
 	initiativeLayout?: InitiativeLayout; // Last sizes the initiative tracker was dragged to
+	hotkeys?: Partial<Record<InitiativeHotkeyAction, string>>; // Initiative tracker shortcuts ("" turns one off)
 }
+
+export type InitiativeHotkeyAction = "editStamina" | "kill" | "selectNext" | "selectPrevious"
+	| "nextGroup" | "previousGroup" | "resetRound" | "applyDamage" | "applyHealing";
+
+export const DEFAULT_HOTKEYS: Record<InitiativeHotkeyAction, string> = {
+	editStamina: "D",
+	kill: "K",
+	selectNext: "ArrowDown",
+	selectPrevious: "ArrowUp",
+	nextGroup: "ArrowRight",
+	previousGroup: "ArrowLeft",
+	resetRound: "R",
+	applyDamage: "Enter",
+	applyHealing: "Shift+Enter",
+};
 
 export interface InitiativeLayout {
 	trackerRatio?: number; // Share of the width taken by the tracker (the creature view gets the rest)

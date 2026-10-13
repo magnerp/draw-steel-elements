@@ -2,6 +2,7 @@ import { App, Modal, MarkdownPostProcessorContext, setIcon } from "obsidian";
 import { Creature, CreatureInstance, EncounterData, EnemyGroup, Condition } from "@drawSteelAdmonition/EncounterData";
 import { ConditionManager } from "@utils/Conditions";
 import { CodeBlocks } from "@utils/CodeBlocks";
+import { actionForEvent } from "@utils/Hotkeys";
 
 export class MinionStaminaPoolModal extends Modal {
 	private group: EnemyGroup;
@@ -246,6 +247,42 @@ export class MinionStaminaPoolModal extends Modal {
 
 		// Initialize checkboxes
 		this.updateCheckboxes();
+
+		// Shortcuts (Enter / Shift+Enter by default). In the Apply fields, Enter deals the damage and saves; when
+		// minions die it moves to their checkboxes instead, and Enter saves once they're picked. Shift+Enter heals
+		// the pool by the number.
+		const save = () => {
+			if (!actionButton.hasClass("disabled")) actionButton.click();
+		};
+		minionsStaminaModal.addEventListener("keydown", (e) => {
+			const action = actionForEvent(e, "stamina");
+			if (action !== "applyDamage" && action !== "applyHealing") return;
+			e.preventDefault();
+			e.stopPropagation();
+			const inApplyFields = e.target === damageInput || e.target === minionCountInput;
+			if (!inApplyFields) {
+				if (action === "applyDamage") save();
+				return;
+			}
+			if (action === "applyDamage") {
+				applyDamageButton.click();
+			} else {
+				const healing = parseInt(damageInput.value);
+				if (isNaN(healing)) return;
+				this.pendingStaminaChange += healing;
+				this.clampPendingChange();
+				this.updateStaminaBar(staminaBarFillLeft, staminaBarFillRight);
+				this.updateInfoText(infoText);
+				this.updateCheckboxes();
+				this.updateActionButton(actionButton, warningIcon);
+			}
+			if (actionButton.hasClass("disabled")) {
+				// Minions have to be picked first
+				this.minionCheckboxes.find((item) => !item.checkbox.disabled)?.checkbox.focus();
+			} else {
+				save();
+			}
+		});
 
 		// Focus the damage input (like the regular stamina modal) instead of the first input, the pool value,
 		// with the value selected so typing replaces the 0

@@ -4,6 +4,7 @@ import {DEFAULT_SETTINGS, DSESettings} from "@model/Settings";
 import {CompendiumDownloader} from "@utils/CompendiumDownloader";
 import { registerElements } from '@/utils/RegisterElements';
 import { initializeSchemaRegistry, resetSchemaRegistry } from '@utils/JsonSchemaValidator';
+import { setHotkeySettings } from '@utils/Hotkeys';
 import componentWrapperSchemaYaml from '@model/schemas/ComponentWrapperSchema.yaml';
 import "./styles-source.css";
 
@@ -21,6 +22,7 @@ export default class DrawSteelAdmonitionPlugin extends Plugin {
         this.initializeSchemas();
 
         await this.loadSettings();
+        setHotkeySettings(() => this.settings);
         this.addSettingTab(new MyPluginSettingTab(this.app, this));
 
         registerElements(this);
