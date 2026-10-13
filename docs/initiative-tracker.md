@@ -365,7 +365,9 @@ example back into the note's text) turns them off, so they don't get in the way 
 | `D` | Open the stamina window (damage, healing) of the selected hero or creature |
 | `K` | Kill the selected creature (not heroes), like Ctrl+right-click |
 | `↓` / `↑` | Select the next / previous hero, or the next / previous creature in the selected creature's group (wraps around) |
-| `→` / `←` | Select the next / previous group: the heroes (first hero), then each enemy group (its selected creature). Wraps around, and works with nothing selected |
+| `→` / `←` | Select the next / previous group: each hero on its own, then each enemy group (its selected creature). Wraps around, and works with nothing selected |
+| `Ctrl+→` / `Ctrl+←` | Like `→` / `←`, but the heroes count as one group: jumps from any hero straight to the first / last enemy group |
+| `Space` | Mark the selected hero's or creature group's turn as taken, or undo it |
 | `R` | Reset Round |
 | `C` | Open the [conditions window](#conditions) of the selected hero or creature |
 | `Shift+C` | Remove every condition from the selected hero or creature |

@@ -554,11 +554,24 @@ export class InitiativeTracker implements HotkeyTarget {
                 this.selectSibling(-1);
                 break;
             case "nextGroup":
-                this.selectGroup(1);
-                break;
             case "previousGroup":
-                this.selectGroup(-1);
+                this.selectGroup(action === "nextGroup" ? 1 : -1, false);
                 break;
+            case "jumpNextGroup":
+            case "jumpPreviousGroup":
+                this.selectGroup(action === "jumpNextGroup" ? 1 : -1, true);
+                break;
+            case "toggleTurn": {
+                const viewed = this.viewed();
+                if (!viewed) {
+                    new Notice("Select a hero or creature first.");
+                    break;
+                }
+                const turn = viewed.kind === "hero" ? viewed.hero : viewed.group;
+                turn.has_taken_turn = !turn.has_taken_turn;
+                this.refresh();
+                break;
+            }
             case "resetRound":
                 this.resetRound();
                 break;
@@ -613,27 +626,33 @@ export class InitiativeTracker implements HotkeyTarget {
 
     /**
      * Moves the selection to the next (`step` 1) or previous (-1) group, wrapping around: the heroes come first,
-     * then each enemy group. An enemy group selects the creature in its focus row, as clicking the group does;
-     * the heroes select the first hero.
+     * each one a group of its own, then each enemy group. With `heroesTogether`, the heroes are one group (selecting
+     * the first hero), so the selection jumps from any hero straight to an enemy group. An enemy group selects the
+     * creature in its focus row, as clicking the group does.
      */
-    private selectGroup(step: number): void {
-        // -1 stands for the heroes
-        const groups: number[] = [];
-        if (this.data.heroes.length > 0) groups.push(-1);
+    private selectGroup(step: number, heroesTogether: boolean): void {
+        // Hero i stands as -(i + 1); with heroesTogether, -1 stands for all of them
+        const heroes = this.data.heroes;
+        const groups: number[] = heroesTogether
+            ? (heroes.length > 0 ? [-1] : [])
+            : heroes.map((_, i) => -(i + 1));
         this.data.enemy_groups.forEach((group, index) => {
             if (this.shownInstance(group)) groups.push(index);
         });
         if (groups.length === 0) return;
 
         const selection = this.viewed() ? selections.get(this.ctx.sourcePath) : undefined;
-        const current = selection ? groups.indexOf(selection.kind === "hero" ? -1 : selection.groupIndex) : -1;
+        const heroIndex = selection?.kind === "hero" ? heroes.findIndex((h) => h.name === selection.name) : -1;
+        const current = !selection ? -1 : groups.indexOf(selection.kind !== "hero"
+            ? selection.groupIndex
+            : (heroesTogether ? -1 : heroIndex < 0 ? NaN : -(heroIndex + 1)));
         // With nothing selected, go to the first (or, backwards, the last) group
         const target = current === -1
             ? (step > 0 ? groups[0] : groups[groups.length - 1])
             : groups[(current + step + groups.length) % groups.length];
 
-        if (target === -1) {
-            this.selectHero(this.data.heroes[0]);
+        if (target < 0) {
+            this.selectHero(heroes[-target - 1]);
         } else {
             const group = this.data.enemy_groups[target];
             const shown = this.shownInstance(group)!;
@@ -642,11 +661,35 @@ export class InitiativeTracker implements HotkeyTarget {
         this.scrollToSelection();
     }
 
-    /** Scrolls the tracker so the selected row or token is visible, and remembers it for the next render. */
+    /**
+     * Scrolls the tracker so the selected hero or group card is visible below the sticky toolbar (with its section
+     * header when it's the section's first card), and remembers the position for the next render.
+     */
     private scrollToSelection(): void {
-        const selected = this.trackerEl.querySelector(".creature-instance-cell.is-viewed")
-            ?? this.trackerEl.querySelector(".is-viewed");
-        selected?.scrollIntoView({block: "nearest"});
+        const selected = this.trackerEl.querySelector<HTMLElement>(".creature-instance-cell.is-viewed")
+            ?? this.trackerEl.querySelector<HTMLElement>(".is-viewed");
+        if (!selected) return;
+        const card = selected.closest<HTMLElement>(".ds-it-card") ?? selected;
+        const section = card.closest<HTMLElement>(".ds-it-section");
+        const toolbar = this.trackerEl.querySelector<HTMLElement>(".ds-it-toolbar");
+        const box = this.trackerEl.getBoundingClientRect();
+        const top = box.top + (toolbar
+            ? toolbar.offsetHeight + parseFloat(getComputedStyle(toolbar).marginBottom || "0")
+            : 0);
+        // The first card shows its section header too; a card too tall to fit only needs the selection visible
+        const fits = (el: HTMLElement) => el.getBoundingClientRect().height <= box.bottom - top;
+        const target = [
+            section && section.querySelector(".ds-it-card") === card ? section : null,
+            card,
+            selected,
+        ].find((el): el is HTMLElement => !!el && fits(el)) ?? selected;
+        const rect = target.getBoundingClientRect();
+        if (rect.top < top) {
+            this.trackerEl.scrollTop -= top - rect.top;
+        } else if (rect.bottom > box.bottom) {
+            // Down far enough to show the whole target, but never so far its top goes under the toolbar
+            this.trackerEl.scrollTop += Math.min(rect.bottom - box.bottom, rect.top - top);
+        }
         trackerScroll.set(this.ctx.sourcePath, this.trackerEl.scrollTop);
     }
 

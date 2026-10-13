@@ -28,6 +28,13 @@
   cards that show their conditions, with a counter of how many are left to pick; the arrow keys move between them.
 - Initiative tracker: a squad minion's token ring and number show its share of the Squad pool, so the minion that
   dies next shows the damage taken so far, like any other creature's token.
+- Initiative tracker: new **Toggle turn** shortcut (`Space` by default) marks the selected hero's or creature
+  group's turn as taken, or undoes it.
+- Initiative tracker: **Next group** / **Previous group** stop at each hero, so moving past the last hero goes on to
+  the first enemy group. New **Jump to next group** / **Jump to previous group** shortcuts (`Ctrl+→` / `Ctrl+←` by
+  default) treat the heroes as one group and jump from any hero straight to an enemy group.
+- Initiative tracker: switching groups with the arrow keys scrolls the whole group (and its section header, for the
+  first one) into view below the toolbar, instead of leaving it partly under the toolbar.
 - Initiative tracker: new shortcuts `C` (open the selected hero's or creature's conditions window) and `Shift+C`
   (remove all its conditions), changeable in the plugin settings.
 - Initiative tracker: by default it's as tall as the note pane (double-click the height handle to return to that
