@@ -5,11 +5,14 @@ export class StatsView {
     private plugin: Plugin;
     private data: StatblockConfig;
     private ctx: MarkdownPostProcessorContext;
+    private showFreeStrike: boolean;
 
-    constructor(plugin: Plugin, data: StatblockConfig, ctx: MarkdownPostProcessorContext) {
+    /** `showFreeStrike` is off for heroes, whose free strikes are abilities rather than a flat damage value. */
+    constructor(plugin: Plugin, data: StatblockConfig, ctx: MarkdownPostProcessorContext, showFreeStrike = true) {
         this.plugin = plugin;
         this.data = data;
         this.ctx = ctx;
+        this.showFreeStrike = showFreeStrike;
     }
 
     public build(parent: HTMLElement) {
@@ -66,6 +69,7 @@ export class StatsView {
 		stabilityItem.createEl("div", { cls: "ds-sb-stats-item-top", text: `${this.data.statblock.stability ?? "-"}` });
 		stabilityItem.createEl("div", { cls: "ds-sb-stats-item-bottom", text: `Stability` });
 
+		if (!this.showFreeStrike) return;
 		const freeStrikeItem = secondLine.createEl("div", { cls: "ds-sb-stats-item" });
 		freeStrikeItem.createEl("div", { cls: "ds-sb-stats-item-top", text: `${this.data.statblock.freeStrike ?? "-"}` });
 		freeStrikeItem.createEl("div", { cls: "ds-sb-stats-item-bottom", text: `Free Strike` });

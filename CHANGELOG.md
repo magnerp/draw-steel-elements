@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- New **Hero** element (`ds-hero`): an interactive hero sheet with stats, characteristics, and abilities, plus
+  Stamina (stamina window, Spend Recovery), Recoveries, Heroic Resource, Surges, and Victories counters and a
+  **Respite** button. Changes are saved back to the block, rewriting only the changed lines.
+- Hero sheets: **Free Strikes** shows the hero's standard melee and ranged free strikes (using the higher of Might
+  and Agility) and any abilities with `ability_type: Free Strike`.
+- Hero sheets: `kit: "[[Mountain]]"` links a kit note. Its Stamina (per echelon), Speed, Stability, damage, and
+  distance bonuses are applied, and its signature ability is shown. `[[` after `kit:` suggests kit notes.
+- Hero sheets: two kits (a tactician's Field Arsenal) with `kit: ["[[Shining Armor]]", "[[Sniper]]"]`. Both
+  signature abilities are shown, and the higher of each bonus applies.
+- Party and encounter heroes linked to a hero sheet (`statblock: "[[Cinder]]"`) take their Recoveries from it and
+  keep their Stamina and Recoveries on the sheet, shared with every party and encounter.
+- Initiative tracker: new **creature view** next to the tracker. Click a hero, a creature, or an enemy group to see
+  its statblock (stats and abilities), or a linked hero's sheet.
+- Initiative tracker: the tracker and creature view scroll on their own and can be resized (drag the bar between
+  them for width, the bar below for height). Sizes are remembered for every tracker.
+- Initiative tracker: in the creature view, click the stamina (in the summary or the statblock's Stamina stat,
+  which shows current/max) to open the same stamina window as in the tracker. The view no longer flashes, and the
+  tracker keeps its scroll position, when a change is saved.
+- Hero sheets: an open sheet updates when its note or kit notes change (e.g. Stamina spent in an encounter), and
+  its Stamina stat shows current/max.
 - Party: **Add Hero** button opens a window asking for the hero's name, max stamina, max Recoveries and an optional
   image (with image suggestions from the vault), and adds them to the party note. Hover a hero and click the **×**
   in its corner to remove them from the party.

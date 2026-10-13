@@ -18,7 +18,7 @@ export class StatblockProcessor {
 		const container = el.createEl('div', { cls: "ds-sb-container ds-container" });
 		try {
 			const data = StatblockConfig.readYaml(source);
-			this.buildUI(container, data, ctx);
+			StatblockProcessor.render(this.plugin, container, data, ctx);
             // Avoid clicks in reading mode from opening edit view
             const stop = (e: Event) => {
                 e.preventDefault();
@@ -37,10 +37,11 @@ export class StatblockProcessor {
 		}
 	}
 
-	private buildUI(container: HTMLElement, data: StatblockConfig, ctx: MarkdownPostProcessorContext): void {
+	/** Renders a statblock (header, stats and features) into `container`. Also used by the initiative tracker's creature view. */
+	public static render(plugin: Plugin, container: HTMLElement, data: StatblockConfig, ctx: MarkdownPostProcessorContext): void {
         const level = data.statblock.level !== undefined ? `Level ${data.statblock.level}` : "Level N/A";
         const roles = data.statblock.roles?.join(", ") ?? "No Role";
-        new HeaderView(this.plugin,
+        new HeaderView(plugin,
             ctx,
             data.statblock.name ?? "Unnamed Creature",
             `${level} ${roles}`,
@@ -48,11 +49,11 @@ export class StatblockProcessor {
             data.statblock.ev !== undefined ? `EV ${data.statblock.ev}` : "EV N/A"
             ).build(container);
 
-		new StatsView(this.plugin, data, ctx).build(container);
+		new StatsView(plugin, data, ctx).build(container);
         if (data.statblock.features?.length > 0) {
             HorizontalRuleProcessor.build(container);
             const featureConfigs = data.statblock.features.map(f => new FeatureConfig(f));
-            new FeaturesView(this.plugin, featureConfigs, ctx).build(container)
+            new FeaturesView(plugin, featureConfigs, ctx).build(container)
         }
 	}
 }

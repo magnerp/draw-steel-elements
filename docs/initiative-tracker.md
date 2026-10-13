@@ -75,6 +75,8 @@ The encounter data consists of three main sections:
 - `name` (string, required): The name of the hero.
 - `max_stamina` (number, required): The maximum health points (stamina) of the hero.
 - `statblock` (string or object, optional): A reference to a statblock file or an inline statblock object. If provided, `name`, `max_stamina`, and `image` will be populated from the referenced statblock if they are not explicitly set.
+  If it links to a [hero sheet](hero.md) (`ds-hero`), Recoveries are filled in as well, and the hero's Stamina and
+  Recoveries are saved to the sheet instead of the encounter (see [Linking a Hero](hero.md#linking-a-hero-to-a-party-or-encounter)).
 - `current_stamina` (number, optional): The current health points of the hero. Defaults to `max_stamina` if not provided.
 - `temp_stamina` (number, optional): Temporary health points (stamina). Defaults to `0`.
 - `image` (string, optional): The hero's image: a vault path, an image name or link (`"[[frodo.png]]"`), or a URL.
@@ -136,6 +138,8 @@ Party heroes use the same fields as [Heroes](#hero-fields). Hero names must be u
   managed by the tracker).
 - **Extra heroes**: you can still list `heroes` in the encounter (allies, guest heroes). They are shown after the
   party and work as before. `heroes` is optional when `party` is set.
+- **Hero sheets**: a party hero linked to a [hero sheet](hero.md) (`statblock: "[[Cinder]]"`) keeps their stamina
+  and Recoveries on the sheet instead of the party note. The party, every encounter, and the sheet stay in sync.
 - **Reset Encounter State** doesn't touch party heroes' stamina or Recoveries.
 - The `party` field accepts a link (`"[[My Party]]"`), a vault path, or a note name. The party note must be a
   regular note (not a canvas card).
@@ -224,7 +228,7 @@ The reference supports multiple formats:
 **Important:** if using File Name or Link and there are multiple files with the same name, the chosen one is not guaranteed. To ensure the correct file, specify the full path 
 
 **Autocomplete:** Obsidian doesn't suggest links inside code blocks, so the plugin does: type `[[` after `statblock:`
-(or `party:`) inside a `ds-` code block to get note suggestions. Pick one to insert `[[Note Name]]`.
+(or `party:`, or `kit:` in a [hero sheet](hero.md)) inside a `ds-` code block to get note suggestions. Pick one to insert `[[Note Name]]`.
 Note that links inside code blocks aren't tracked by Obsidian, so they don't show up as backlinks and aren't
 updated when you rename the note.
 
@@ -276,7 +280,9 @@ malice:
 
 ## Interacting with the Tracker
 
-Once your encounter is defined, the Initiative Tracker provides an interactive UI in your note.
+Once your encounter is defined, the Initiative Tracker provides an interactive UI in your note: the tracker itself
+(heroes, enemy groups, Malice) and, next to it, the [creature view](#creature-view) showing the selected hero's or
+creature's stats and abilities.
 
 ### Heroes
 
@@ -305,6 +311,35 @@ Once your encounter is defined, the Initiative Tracker provides an interactive U
 	  minion, only that minion is marked dead and its stamina (one minion's max stamina) is taken out of the squad's
 	  pool, so earlier damage carries over (e.g. 4 minions with 3 stamina at 10/12: killing one leaves 7/9).
 	- **Conditions**: Middle-click a creature to open the Add Conditions window for it, without selecting it.
+
+### Creature View
+
+The creature view sits to the right of the tracker and shows whoever you select:
+
+- **Selecting**: Click a hero's row, a creature in a group's grid, or a group's details row. Clicking anywhere else
+  on an enemy group selects the creature in its details row: the only creature in the group, or the one last
+  selected in its grid. The selected row or cell is highlighted. Click the **×** in the view to clear it.
+- **Summary**: The top of the view shows the portrait, name (and instance number), group, stamina (with Winded,
+  Dying, or DEAD), conditions, and, for heroes, Recoveries. Click the stamina to open the same stamina window as in
+  the tracker (damage, healing, temporary Stamina, and Spend Recovery for heroes; the Stamina Pool modal for squad
+  minions). Conditions are changed in the tracker.
+- **Stamina stat**: In the statblock's stats row, Stamina shows the selected hero's or creature's current/max Stamina
+  (the minion pool for squad minions) instead of the statblock's max. Clicking it opens the same stamina window.
+- **Statblock**: Below the summary is the statblock the hero or creature links to with `statblock`, rendered like a
+  [Statblock Element](statblock.md): stats, characteristics, and all abilities. A linked `ds-featureblock` is shown
+  as a [featureblock](featureblock.md). A hero linked to a [hero sheet](hero.md) shows the sheet, where the Heroic
+  Resource, Surges, Victories, and free strikes are available. Without a `statblock`, the view says so.
+- The selection isn't saved in the code block. It's remembered per note while Obsidian is open, so it stays put
+  when the tracker saves and refreshes.
+
+#### Layout, Resizing, and Scrolling
+
+- The tracker and the creature view each scroll on their own, so scrolling a long list of enemy groups doesn't
+  scroll the note.
+- Drag the bar between them to change how much width each gets, and drag the bar below them to change their
+  height. The sizes are saved in the plugin's settings and used by every Initiative Tracker.
+- When the tracker is narrower than about 760px, the creature view moves below the tracker instead. Obsidian's
+  **Readable line length** setting limits notes to about that width, so turn it off to have them side by side.
 
 ### Stamina Pool Modal for Minions
 

@@ -17,8 +17,13 @@ export interface NoteSuggestion {
     score: number;
 }
 
-// `statblock:` / `party:` value being typed as a link, e.g. `  - statblock: [[Thorn Dr`
-const LINK_FIELD_REGEX = /^\s*(?:-\s*)?(?:statblock|party)\s*:\s*["']?\[\[([^\[\]]*)$/;
+// `statblock:` / `party:` / `kit:` value being typed as a link, e.g. `  - statblock: [[Thorn Dr`
+const LINK_FIELD_REGEX = /^\s*(?:-\s*)?(?:statblock|party|kits?)\s*:\s*["']?\[\[([^\[\]]*)$/;
+// A further kit in an inline list, e.g. `kit: ["[[Shining Armor]]", "[[Sni`
+const KIT_LIST_REGEX = /^\s*kits?\s*:\s*\[(?:.*["',\[])?\s*\[\[([^\[\]]*)$/;
+// An item of a block list, e.g. `  - "[[Sni`; a kit if the list belongs to `kit:` / `kits:`
+const LIST_ITEM_REGEX = /^\s*-\s*["']?\[\[([^\[\]]*)$/;
+const KIT_FIELD_LINE_REGEX = /^\s*kits?\s*:\s*$/;
 const FENCE_REGEX = /^\s*(`{3,}|~{3,})(.*)$/;
 const MAX_FENCE_SEARCH_LINES = 1000;
 const MAX_SUGGESTIONS = 50;
@@ -55,17 +60,29 @@ export function searchNotes(files: TFile[], query: string): NoteSuggestion[] {
 
 /**
  * Notes that look like statblocks: `stamina` in their frontmatter (every compendium statblock has
- * it) or "statblock" in their path.
+ * it), `type: hero` (hero sheets) or "statblock" in their path.
  */
 export function statblockFiles(app: App): TFile[] {
-    return app.vault.getMarkdownFiles().filter((file) =>
-        app.metadataCache.getFileCache(file)?.frontmatter?.stamina != null || /statblock/i.test(file.path)
-    );
+    return app.vault.getMarkdownFiles().filter((file) => {
+        const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+        return frontmatter?.stamina != null || frontmatter?.type === "hero" || /statblock/i.test(file.path);
+    });
 }
 
 /** Searches statblock notes, falling back to all notes when no statblock note matches. */
 export function searchStatblocks(app: App, query: string): NoteSuggestion[] {
     const results = searchNotes(statblockFiles(app), query);
+    return results.length > 0 ? results : searchNotes(app.vault.getMarkdownFiles(), query);
+}
+
+/** Kit notes: `type: kit` in their frontmatter (every compendium kit has it). */
+function kitFiles(app: App): TFile[] {
+    return app.vault.getMarkdownFiles().filter((file) => app.metadataCache.getFileCache(file)?.frontmatter?.type === "kit");
+}
+
+/** Searches kit notes, falling back to all notes when no kit note matches. */
+function searchKits(app: App, query: string): NoteSuggestion[] {
+    const results = searchNotes(kitFiles(app), query);
     return results.length > 0 ? results : searchNotes(app.vault.getMarkdownFiles(), query);
 }
 
@@ -78,7 +95,7 @@ export function renderNoteSuggestion(suggestion: NoteSuggestion, el: HTMLElement
 
 /**
  * Obsidian's own [[link]] suggestions don't work inside code blocks. This offers note suggestions
- * when typing `[[` as the value of `statblock:` or `party:` inside a Draw Steel Elements (ds-*) block.
+ * when typing `[[` as the value of `statblock:`, `party:` or `kit:` inside a Draw Steel Elements (ds-*) block.
  */
 export class NoteLinkSuggest extends EditorSuggest<NoteSuggestion> {
     constructor(app: App) {
@@ -87,7 +104,8 @@ export class NoteLinkSuggest extends EditorSuggest<NoteSuggestion> {
 
     onTrigger(cursor: EditorPosition, editor: Editor, file: TFile | null): EditorSuggestTriggerInfo | null {
         const beforeCursor = editor.getLine(cursor.line).substring(0, cursor.ch);
-        const match = beforeCursor.match(LINK_FIELD_REGEX);
+        const match = beforeCursor.match(LINK_FIELD_REGEX) ?? beforeCursor.match(KIT_LIST_REGEX)
+            ?? (this.isKitListItem(editor, cursor.line) ? beforeCursor.match(LIST_ITEM_REGEX) : null);
         if (!match || !this.isInDseCodeBlock(editor, cursor.line)) {
             return null;
         }
@@ -99,11 +117,13 @@ export class NoteLinkSuggest extends EditorSuggest<NoteSuggestion> {
     }
 
     getSuggestions(context: EditorSuggestContext): NoteSuggestion[] {
-        // `statblock:` suggests statblock notes first; `party:` any note
-        const isStatblockField = /statblock\s*:/.test(context.editor.getLine(context.start.line));
-        return isStatblockField
-            ? searchStatblocks(this.app, context.query)
-            : searchNotes(this.app.vault.getMarkdownFiles(), context.query);
+        // `statblock:` suggests statblock notes first, `kit:` kit notes; `party:` any note
+        const line = context.editor.getLine(context.start.line);
+        if (/statblock\s*:/.test(line)) return searchStatblocks(this.app, context.query);
+        if (/kits?\s*:/.test(line) || this.isKitListItem(context.editor, context.start.line)) {
+            return searchKits(this.app, context.query);
+        }
+        return searchNotes(this.app.vault.getMarkdownFiles(), context.query);
     }
 
     renderSuggestion(suggestion: NoteSuggestion, el: HTMLElement): void {
@@ -123,6 +143,17 @@ export class NoteLinkSuggest extends EditorSuggest<NoteSuggestion> {
         const replacement = `[[${linkText}]]`;
         editor.replaceRange(replacement, context.start, end);
         editor.setCursor({line: context.start.line, ch: context.start.ch + replacement.length});
+    }
+
+    /** True if `line` is an item of a block list under `kit:` / `kits:` (a hero with two kits). */
+    private isKitListItem(editor: Editor, line: number): boolean {
+        if (!/^\s*-\s/.test(editor.getLine(line))) return false;
+        for (let i = line - 1; i >= Math.max(0, line - 10); i--) {
+            const text = editor.getLine(i);
+            if (/^\s*-\s/.test(text)) continue;
+            return KIT_FIELD_LINE_REGEX.test(text);
+        }
+        return false;
     }
 
     /** True if `line` is inside a fenced code block whose language starts with `ds-`. */

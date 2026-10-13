@@ -859,6 +859,191 @@ code.dsa {
 	text-align: center;
 }
 
+/* Initiative tracker layout: tracker + creature view */
+
+.ds-init-container {
+	container-type: inline-size;
+}
+
+.ds-init-layout {
+	--ds-init-height: 70vh;
+	display: flex;
+	height: var(--ds-init-height);
+}
+
+/* Each side scrolls on its own, so the page doesn't have to */
+.ds-init-tracker,
+.ds-init-view {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.ds-init-tracker {
+	padding-right: 0.5em;
+}
+
+.ds-init-view {
+	background-color: var(--code-background);
+	border-radius: 4px;
+	padding: 0.75em;
+}
+
+.ds-init-view.is-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Drag handles: between the two sides (width) and below them (height) */
+.ds-init-resizer {
+	flex: none;
+	touch-action: none;
+	user-select: none;
+	position: relative;
+}
+
+.ds-init-resizer::after {
+	content: '';
+	position: absolute;
+	border-radius: 2px;
+	background-color: var(--background-modifier-border);
+	transition: background-color 0.1s;
+}
+
+.ds-init-resizer:hover::after,
+.ds-init-resizer.is-dragging::after {
+	background-color: var(--interactive-accent);
+}
+
+.ds-init-splitter {
+	width: 1em;
+	cursor: col-resize;
+}
+
+.ds-init-splitter::after {
+	top: 0;
+	bottom: 0;
+	left: calc(50% - 2px);
+	width: 4px;
+}
+
+.ds-init-height-handle {
+	height: 1em;
+	cursor: row-resize;
+}
+
+.ds-init-height-handle::after {
+	left: calc(50% - 2em);
+	width: 4em;
+	top: calc(50% - 2px);
+	height: 4px;
+}
+
+/* Too narrow for two columns: the creature view goes under the tracker, each with the set height */
+@container (max-width: 760px) {
+	.ds-init-layout {
+		flex-direction: column;
+		height: auto;
+		gap: 1em;
+	}
+
+	.ds-init-tracker,
+	.ds-init-view {
+		flex: none !important;
+		max-height: var(--ds-init-height);
+	}
+
+	.ds-init-view.is-empty {
+		min-height: 8em;
+	}
+
+	.ds-init-splitter {
+		display: none;
+	}
+}
+
+.ds-init-view-placeholder,
+.ds-init-view-message {
+	color: var(--text-muted);
+	font-style: italic;
+	padding: 0.5em 0;
+}
+
+.ds-init-view-message.error-message {
+	color: var(--text-error);
+	font-style: normal;
+}
+
+.ds-init-view-header {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5em;
+	margin-bottom: 0.75em;
+}
+
+.ds-init-view-summary {
+	display: flex;
+	align-items: center;
+	flex: 1;
+	min-width: 0;
+}
+
+.ds-init-view-group {
+	color: var(--text-muted);
+	font-size: var(--font-smaller);
+}
+
+.ds-init-view-stats-stamina {
+	cursor: pointer;
+}
+
+.ds-init-view-stats-stamina:hover .ds-sb-stats-item-top {
+	text-decoration: underline;
+}
+
+.ds-init-view-recoveries {
+	color: var(--text-muted);
+	font-size: var(--font-smaller);
+	text-align: center;
+}
+
+.ds-init-view-summary .condition-icon {
+	cursor: default;
+}
+
+.ds-init-view-close {
+	display: flex;
+	cursor: pointer;
+	color: var(--text-faint);
+}
+
+.ds-init-view-close:hover {
+	color: var(--text-normal);
+}
+
+/* The statblock already sits on the view's background */
+.ds-init-view-body .ds-container {
+	background-color: transparent;
+	padding-bottom: 0;
+}
+
+/* Row / cell currently shown in the creature view */
+.ds-init-tracker .enemy-group,
+.ds-init-tracker .character-row {
+	cursor: pointer;
+}
+
+.ds-init-tracker .character-row.is-viewed {
+	box-shadow: inset 3px 0 0 var(--interactive-accent);
+}
+
+.creature-instance-cell.is-viewed {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+
 /* Add Enemy Group modal */
 
 .ds-add-group-modal .add-group-name-row {
@@ -2441,4 +2626,102 @@ Post Vue Globals
   --stamina-bar-color-winded: yellow;
   --stamina-bar-color-dying: red;
   /* --stamina-bar-color: var(--text-accent) */
+}
+
+/* ==================== */
+/* Hero sheet (ds-hero) */
+/* ==================== */
+
+.ds-hero-vitals {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75em 1.5em;
+	padding: 0.5em 0.75em;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ds-hero-health {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.25em 1em;
+}
+
+.ds-hero-health .hero-recoveries {
+	margin-top: 0;
+	font-size: inherit;
+}
+
+.ds-hero-counters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.5em 1.25em;
+}
+
+.ds-hero-counter {
+	display: flex;
+	align-items: center;
+	gap: 0.25em;
+	white-space: nowrap;
+}
+
+.ds-hero-counter-label {
+	font-weight: 600;
+	margin-right: 0.25em;
+}
+
+.ds-hero-counter-value {
+	min-width: 1.5em;
+	text-align: center;
+	font-weight: bold;
+}
+
+/* Counter buttons are always visible on the sheet */
+.ds-hero-container .recovery-adjust-btn {
+	visibility: visible;
+	color: var(--text-muted);
+}
+
+.ds-hero-container .recovery-adjust-btn:hover {
+	color: var(--text-normal);
+}
+
+.ds-hero-respite {
+	margin-left: auto;
+}
+
+.ds-hero-free-strikes-button.is-active {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.ds-hero-free-strikes {
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ds-hero-kit {
+	padding: 0.4em 0.75em;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.ds-hero-kit-label {
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.ds-hero-kit-error {
+	color: var(--text-error);
+}
+
+.ds-hero-kit-signature {
+	padding: 0 0.75em;
+}
+
+.ds-hero-kit-signature-title {
+	font-weight: bold;
+	margin-top: 0.5em;
 }
