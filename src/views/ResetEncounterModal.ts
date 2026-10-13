@@ -2,9 +2,11 @@ import { App, Modal } from 'obsidian';
 
 export class ResetEncounterModal extends Modal {
 	private onConfirm: () => void;
+	private hasPartySnapshot: boolean;
 
-	constructor(app: App, onConfirm: () => void) {
+	constructor(app: App, hasPartySnapshot: boolean, onConfirm: () => void) {
 		super(app);
+		this.hasPartySnapshot = hasPartySnapshot;
 		this.onConfirm = onConfirm;
 	}
 
@@ -15,8 +17,10 @@ export class ResetEncounterModal extends Modal {
 		contentEl.createEl('h2', { text: 'Confirm Encounter Reset' });
 
 		contentEl.createEl('p', { text: 'Are you sure you want to reset the encounter data?  ' +
-				'All state will be lost including current stamina, conditions, turn tracker, and villain power. ' +
-				'Heroes from a linked party note keep their stamina and Recoveries (take a Respite on the party note to restore them).' });
+				'Every creature comes back alive at full stamina (from its statblock note), and all conditions, turns and Malice are cleared. ' +
+				(this.hasPartySnapshot
+					? 'Heroes from a linked party note or a hero sheet go back to the Stamina and Recoveries saved with "Save Party State".'
+					: 'Heroes from a linked party note or a hero sheet keep their Stamina and Recoveries (use "Save Party State" at the start of the encounter to be able to restore them).') });
 
 		const buttonContainer = contentEl.createEl('div', { cls: 'modal-button-container' });
 

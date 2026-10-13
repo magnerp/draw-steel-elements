@@ -531,12 +531,10 @@ code.dsa {
 .top-action-bar {
 	margin-bottom: 10px;
 	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5em 1em;
 	justify-content: flex-start;
 	align-items: center;
-}
-
-.top-action-bar button {
-	margin-right: 1em;
 }
 
 /* Character Rows */

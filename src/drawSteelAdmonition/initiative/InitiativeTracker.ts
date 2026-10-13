@@ -14,6 +14,8 @@ import {
     Hero,
     initEnemyGroup,
     resetEncounter,
+    hasSharedStamina,
+    snapshotParty,
 } from "@drawSteelAdmonition/EncounterData";
 import {ResetEncounterModal} from "@views/ResetEncounterModal";
 import {ConfirmModal} from "@views/ConfirmModal";
@@ -222,6 +224,18 @@ export class InitiativeTracker implements HotkeyTarget {
             await PartyStore.saveHeroes(this.app, file, [hero]);
         } else {
             await this.save();
+        }
+    }
+
+    /** Saves the stamina/recoveries of heroes stored outside this block, writing the party note once. */
+    private async saveSharedHeroes(heroes: Hero[]): Promise<void> {
+        const partyHeroes = heroes.filter((hero) => hero.from_party);
+        if (partyHeroes.length > 0 && this.data.party) {
+            const file = PartyStore.resolveFile(this.app, this.data.party, this.ctx.sourcePath);
+            await PartyStore.saveHeroes(this.app, file, partyHeroes);
+        }
+        for (const hero of heroes.filter((h) => !h.from_party)) {
+            await HeroSheetStore.saveHero(this.app, hero);
         }
     }
 
@@ -524,11 +538,27 @@ export class InitiativeTracker implements HotkeyTarget {
             cls: "reset-encounter-button",
         });
         resetEncounterButton.addEventListener("click", () => {
-            new ResetEncounterModal(this.app, () => {
-                resetEncounter(data);
-                this.save();
+            new ResetEncounterModal(this.app, !!data.party_snapshot, async () => {
+                const restored = await resetEncounter(data, new ReferenceResolver(this.app, this.plugin.settings));
+                this.render();
+                await this.save();
+                await this.saveSharedHeroes(restored);
             }).open();
         });
+
+        // Save Party State Button: what "Reset Encounter State" brings the party back to
+        if (data.heroes.some(hasSharedStamina)) {
+            const snapshotButton = topActionBar.createEl("button", {
+                text: "Save Party State",
+                cls: "save-party-state-button",
+                attr: {title: "Save the party's current Stamina and Recoveries; resetting the encounter restores them"},
+            });
+            snapshotButton.addEventListener("click", async () => {
+                snapshotParty(data);
+                await this.save();
+                new Notice("Party state saved. Resetting the encounter will restore it.");
+            });
+        }
 
         // Add Enemy Group Button
         const addGroupButton = topActionBar.createEl("button", {

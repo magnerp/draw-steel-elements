@@ -140,7 +140,8 @@ Party heroes use the same fields as [Heroes](#hero-fields). Hero names must be u
   party and work as before. `heroes` is optional when `party` is set.
 - **Hero sheets**: a party hero linked to a [hero sheet](hero.md) (`statblock: "[[Cinder]]"`) keeps their stamina
   and Recoveries on the sheet instead of the party note. The party, every encounter, and the sheet stay in sync.
-- **Reset Encounter State** doesn't touch party heroes' stamina or Recoveries.
+- **Reset Encounter State** doesn't touch party heroes' stamina or Recoveries, unless you saved them with
+  **Save Party State** (see [Reset Encounter State](#reset-encounter-state)).
 - The `party` field accepts a link (`"[[My Party]]"`), a vault path, or a note name. The party note must be a
   regular note (not a canvas card).
 
@@ -398,7 +399,16 @@ Click the "Reset Round" button to clear all turn indicators and start a new roun
 
 ### Reset Encounter State
 
-Click the "Reset Encounter State" button to clear all "state" data from the tracker. All state will be lost including current stamina, conditions, turn tracker, and villain power. **Warning: this is a destructive operation**
+Click the "Reset Encounter State" button to put the encounter back to its starting state. Every creature comes back
+alive at full stamina (its max stamina is re-read from its statblock note), and all conditions, turns, and Malice
+are cleared. Heroes written in the tracker block go back to full stamina and Recoveries. **Warning: this is a
+destructive operation**
+
+Heroes from a party note or linked to a hero sheet keep their stamina and Recoveries, since those are shared across
+encounters. To be able to restore them, click **Save Party State** at the start of the encounter: it saves their
+current Stamina, temporary Stamina, and Recoveries in the encounter block (`party_snapshot`), and **Reset Encounter
+State** then brings them back to it, updating the party note and hero sheets. Click it again to replace the saved
+state. The button only appears when the encounter has such heroes.
 
 ### Stamina Management
 
