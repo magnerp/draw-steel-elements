@@ -357,8 +357,10 @@ The creature view sits to the right of the tracker and shows whoever you select:
 
 #### Keyboard Shortcuts
 
-Click anywhere on a tracker to send keyboard shortcuts to it; it gets an outline. Clicking anywhere outside it (for
-example back into the note's text) turns them off, so they don't get in the way of typing.
+Opening a note with a tracker sends keyboard shortcuts to it right away; it gets an outline. Until you click the
+tracker, keys typed in the note's editor still go to the editor. Click anywhere on a tracker to send shortcuts to it
+again; clicking anywhere outside it (for example back into the note's text) turns them off until the note is opened
+again, so they don't get in the way of typing.
 
 | Default | Action |
 |---|---|

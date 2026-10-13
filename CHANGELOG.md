@@ -33,6 +33,8 @@
 - Initiative tracker: **Next group** / **Previous group** stop at each hero, so moving past the last hero goes on to
   the first enemy group. New **Jump to next group** / **Jump to previous group** shortcuts (`Ctrl+→` / `Ctrl+←` by
   default) treat the heroes as one group and jump from any hero straight to an enemy group.
+- Initiative tracker: opening a note with a tracker turns its keyboard shortcuts on, without clicking it first.
+  Typing in the note's editor still works until the tracker is clicked.
 - Initiative tracker: switching groups with the arrow keys scrolls the whole group (and its section header, for the
   first one) into view below the toolbar, instead of leaving it partly under the toolbar.
 - Initiative tracker: new shortcuts `C` (open the selected hero's or creature's conditions window) and `Shift+C`
